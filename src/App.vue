@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { mdiPlus } from '@mdi/js'
 import AppHeader from './components/AppHeader.vue'
 import ButtonInlaySVG, { type ZoneConfig } from './components/ButtonInlaySVG.vue'
@@ -8,13 +8,14 @@ import { useDarkMode } from './composables/useDarkMode'
 import { useSheets } from './composables/useSheets'
 import type { ActionType, ActionZone } from './types'
 
-const { init, isDark } = useDarkMode()
+const { init } = useDarkMode()
 onMounted(() => init())
 
 const { activeSheet, activeSheetId, activeButtonId, addButton } = useSheets()
 
-const strokeColor = computed(() => (isDark.value ? '#ffffff' : '#000000'))
-const fillColor = computed(() => (isDark.value ? '#1f2937' : '#ffffff'))
+// SVG preview always uses print-accurate colors (white bg, black ink)
+const strokeColor = '#000000'
+const fillColor = '#ffffff'
 
 function actionTypeToIndicator(type: ActionType): 'dot' | 'double-dot' | 'dash' {
   if (type === 'single') return 'dot'
@@ -42,12 +43,13 @@ function handleAddButton() {
 </script>
 
 <template>
-  <div class="h-screen flex flex-col bg-white dark:bg-gray-950 text-gray-900 dark:text-white transition-colors overflow-hidden">
+  <div class="flex flex-col min-h-screen md:h-screen md:overflow-hidden bg-white dark:bg-gray-950 text-gray-900 dark:text-white transition-colors">
     <AppHeader />
 
-    <div class="flex flex-1 overflow-hidden">
+    <!-- Content: sheets on top / editor below on mobile; side-by-side on desktop -->
+    <div class="flex flex-col md:flex-row flex-1 md:overflow-hidden">
       <!-- Sheet canvas -->
-      <main class="flex-1 overflow-auto p-6">
+      <main class="flex-1 overflow-auto p-4 md:p-6">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-base font-semibold text-gray-700 dark:text-gray-300">
             {{ activeSheet?.name ?? 'Sheet' }}
@@ -93,9 +95,20 @@ function handleAddButton() {
       </main>
 
       <!-- Editor panel -->
-      <aside class="w-80 shrink-0 border-l border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col">
+      <aside class="md:w-80 shrink-0 border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-800 flex flex-col md:overflow-hidden">
         <ButtonEditorPanel />
       </aside>
     </div>
+
+    <!-- Footer -->
+    <footer class="no-print shrink-0 border-t border-gray-200 dark:border-gray-800 px-6 py-2 text-center text-xs text-gray-400 dark:text-gray-600">
+      Based on
+      <a
+        href="https://www.printables.com/model/951541-somrig-button-inlay-sheets"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="underline hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
+      >Aasikki's original template</a>
+    </footer>
   </div>
 </template>
