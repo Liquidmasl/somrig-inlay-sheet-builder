@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { mdiWeatherNight, mdiWeatherSunny, mdiPrinter, mdiDownload } from '@mdi/js'
+import { ref } from 'vue'
+import { mdiWeatherNight, mdiWeatherSunny, mdiPrinter, mdiDownload, mdiHeart } from '@mdi/js'
 import { useDarkMode } from '../composables/useDarkMode'
+import DonationModal from './DonationModal.vue'
 
 const { isDark, toggle } = useDarkMode()
+const showDonation = ref(false)
 
 function handlePrint() {
   window.print()
@@ -15,6 +18,19 @@ function handlePrint() {
       Somrig Inlay Sheet Builder
     </h1>
     <div class="flex items-center gap-2">
+      <!-- Donation button -->
+      <button
+        @click="showDonation = true"
+        class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm font-medium"
+        aria-label="Support this project"
+        title="Support this project"
+      >
+        <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
+          <path :d="mdiHeart" />
+        </svg>
+        <span class="hidden sm:inline">Support</span>
+      </button>
+
       <button
         @click="handlePrint"
         class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
@@ -48,4 +64,6 @@ function handlePrint() {
       </button>
     </div>
   </header>
+
+  <DonationModal :open="showDonation" @close="showDonation = false" />
 </template>
