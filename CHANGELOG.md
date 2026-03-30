@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.1.0] - 2026-03-30
+
+
+- Added Print and Download PDF buttons to the header
+- Print output renders button inlays at exact physical dimensions (41.2mm × 71.9mm) with all UI chrome hidden
+
+### Added
+- **PayPal donation button** — A "Support" button in the header opens a modal with custom no-ads copy and a branded PayPal donate button, replacing the default PayPal GIF with a clean, sympathetic design.
+
+---
+
+> **Tip:** I will respond to comments that @ mention @LiquidmaslsBots on this PR. You can also submit a "changes requested" review with all your feedback at once, and I will automatically wake up to address each comment.
+
+- **Dark mode, responsive layout, and footer** — Dark mode now applies instantly on load with no flash. Button inlay SVG previews always use a white background matching print output. On mobile the sheet canvas appears on top with the editor below; on desktop the side-by-side layout is preserved. A small footer credits Aasikki's original template.
+
+---
+
+> **Tip:** I will respond to comments that @ mention @LiquidmaslsBots on this PR. You can also submit a "changes requested" review with all your feedback at once, and I will automatically wake up to address each comment.
+
+
 ## [0.0.2] - 2026-03-30
 
 - Fix Netlify deployment in automated release workflow by using the `prod` GitHub environment for secrets
