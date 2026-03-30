@@ -8,6 +8,13 @@
  *   Vertical center: x = 20.2mm
  *   Dot indicator: 1.5mm diameter circle
  *   Dash indicator: 4.5mm × 1.5mm rounded rect
+ *
+ * Each button has a top half and a bottom half, each independently configurable:
+ *   - topZones / botZones: number of zones (1, 2, or 3) for that half
+ *   - topZoneConfig / botZoneConfig: per-zone icon + indicator config
+ *
+ * Each function kind (single=dot, long=dash, double=double-dot) should appear
+ * at most once per half — this is a design constraint enforced by the caller.
  */
 
 export type ZoneCount = 1 | 2 | 3
@@ -21,10 +28,14 @@ export interface ZoneConfig {
 }
 
 const props = withDefaults(defineProps<{
-  /** Number of zones: 1 = full, 2 = split in half, 3 = split in thirds */
-  zones?: ZoneCount
-  /** Per-zone config (index 0 = first zone from left) */
-  zoneConfig?: ZoneConfig[]
+  /** Number of zones in the top half: 1 = full, 2 = split, 3 = thirds */
+  topZones?: ZoneCount
+  /** Number of zones in the bottom half: 1 = full, 2 = split, 3 = thirds */
+  botZones?: ZoneCount
+  /** Per-zone config for top half (index 0 = first zone from left) */
+  topZoneConfig?: ZoneConfig[]
+  /** Per-zone config for bottom half (index 0 = first zone from left) */
+  botZoneConfig?: ZoneConfig[]
   /** Stroke color for outlines/dividers */
   strokeColor?: string
   /** Fill color for the inlay background */
@@ -34,8 +45,10 @@ const props = withDefaults(defineProps<{
   /** Scale factor applied to the viewBox (1 = 1px per mm) */
   scale?: number
 }>(), {
-  zones: 1,
-  zoneConfig: () => [],
+  topZones: 1,
+  botZones: 1,
+  topZoneConfig: () => [],
+  botZoneConfig: () => [],
   strokeColor: '#000000',
   fillColor: '#ffffff',
   iconColor: '#000000',
@@ -83,75 +96,39 @@ interface Zone {
   cy: number  // center y
 }
 
-function computeZones(): Zone[] {
-  // Each physical button has a top half and bottom half split by DIVIDER_Y.
-  // The issue calls the split sections "halves" and zones are subdivisions of
-  // the top half.  For simplicity we treat the whole height and split the
-  // width within each of top and bottom halves identically.
-  //
-  // Per the issue description:
-  //   1 zone  — full width, single action indicator
-  //   2 zones — split at CENTER_X
-  //   3 zones — split into thirds
-  //
-  // We apply the same vertical division to both top and bottom halves so icons
-  // and indicators align.
-
-  const topH = DIVIDER_Y          // 0 → 36
-  const botH = H - DIVIDER_Y      // 36 → 71.9
-
-  if (props.zones === 1) {
-    return [
-      { x: 0, y: 0,        w: W, h: topH, cx: W / 2, cy: topH / 2 },
-      { x: 0, y: DIVIDER_Y, w: W, h: botH, cx: W / 2, cy: DIVIDER_Y + botH / 2 },
-    ]
+function computeHalfZones(count: ZoneCount, yStart: number, height: number): Zone[] {
+  if (count === 1) {
+    return [{ x: 0, y: yStart, w: W, h: height, cx: W / 2, cy: yStart + height / 2 }]
   }
-
-  if (props.zones === 2) {
+  if (count === 2) {
     const lw = CENTER_X
     const rw = W - CENTER_X
     return [
-      { x: 0,   y: 0,         w: lw, h: topH, cx: lw / 2,       cy: topH / 2 },
-      { x: lw,  y: 0,         w: rw, h: topH, cx: lw + rw / 2,  cy: topH / 2 },
-      { x: 0,   y: DIVIDER_Y, w: lw, h: botH, cx: lw / 2,       cy: DIVIDER_Y + botH / 2 },
-      { x: lw,  y: DIVIDER_Y, w: rw, h: botH, cx: lw + rw / 2,  cy: DIVIDER_Y + botH / 2 },
+      { x: 0,  y: yStart, w: lw, h: height, cx: lw / 2,      cy: yStart + height / 2 },
+      { x: lw, y: yStart, w: rw, h: height, cx: lw + rw / 2, cy: yStart + height / 2 },
     ]
   }
-
-  // 3 zones — split into thirds by width
+  // 3 zones — split into thirds
   const zw = W / 3
-  const zones: Zone[] = []
-  for (let row = 0; row < 2; row++) {
-    const zy = row === 0 ? 0 : DIVIDER_Y
-    const zh = row === 0 ? topH : botH
-    for (let col = 0; col < 3; col++) {
-      zones.push({
-        x: col * zw,
-        y: zy,
-        w: zw,
-        h: zh,
-        cx: col * zw + zw / 2,
-        cy: zy + zh / 2,
-      })
-    }
-  }
-  return zones
+  return [0, 1, 2].map(col => ({
+    x: col * zw,
+    y: yStart,
+    w: zw,
+    h: height,
+    cx: col * zw + zw / 2,
+    cy: yStart + height / 2,
+  }))
 }
 
-const allZones = computeZones()
+const topH = DIVIDER_Y          // 0 → 36
+const botH = H - DIVIDER_Y      // 36 → 71.9
 
-// For icons/indicators we only need the top-row zones (indices 0..zones-1)
-// Bottom-row zones mirror the same columns but may have their own config later.
-const topZones = allZones.slice(0, props.zones)
-const botZones = allZones.slice(props.zones)
-
-function getConfig(zoneIndex: number): ZoneConfig {
-  return props.zoneConfig[zoneIndex] ?? {}
-}
+const topZoneList = computeHalfZones(props.topZones, 0, topH)
+const botZoneList = computeHalfZones(props.botZones, DIVIDER_Y, botH)
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** cx,cy = center of indicator in mm */
+/** cy for the indicator in a zone */
 function indicatorCY(zone: Zone): number {
   return zone.y + zone.h - INDICATOR_MARGIN_BOTTOM
 }
@@ -164,12 +141,15 @@ function iconTransform(cx: number, cy: number): string {
   return `translate(${tx},${ty}) scale(${s})`
 }
 
-// Vertical divider X positions (within top + bottom half)
-const verticalDividers: number[] = (() => {
-  if (props.zones === 1) return []
-  if (props.zones === 2) return [CENTER_X]
+/** Vertical divider X positions for a given zone count */
+function vertDividers(count: ZoneCount): number[] {
+  if (count === 1) return []
+  if (count === 2) return [CENTER_X]
   return [W / 3, (W / 3) * 2]
-})()
+}
+
+const topDividers = vertDividers(props.topZones)
+const botDividers = vertDividers(props.botZones)
 </script>
 
 <template>
@@ -206,30 +186,40 @@ const verticalDividers: number[] = (() => {
         stroke-width="0.3"
       />
 
-      <!-- Vertical dividers (same lines span full height) -->
+      <!-- Top-half vertical dividers (span top half only) -->
       <line
-        v-for="vx in verticalDividers"
-        :key="vx"
+        v-for="vx in topDividers"
+        :key="`top-vdiv-${vx}`"
         :x1="vx" y1="0"
+        :x2="vx" :y2="DIVIDER_Y"
+        :stroke="strokeColor"
+        stroke-width="0.3"
+      />
+
+      <!-- Bottom-half vertical dividers (span bottom half only) -->
+      <line
+        v-for="vx in botDividers"
+        :key="`bot-vdiv-${vx}`"
+        :x1="vx" :y1="DIVIDER_Y"
         :x2="vx" :y2="H"
         :stroke="strokeColor"
         stroke-width="0.3"
       />
 
       <!-- Top-half zones: icon + indicator -->
-      <g v-for="(zone, i) in topZones" :key="`top-${i}`">
+      <g v-for="(zone, i) in topZoneList" :key="`top-${i}`">
         <!-- MDI Icon -->
         <g
-          v-if="getConfig(i).icon"
+          v-if="topZoneConfig[i]?.icon"
           :transform="iconTransform(zone.cx, zone.cy)"
           :fill="iconColor"
         >
-          <path :d="getConfig(i).icon" />
+          <path :d="topZoneConfig[i].icon" />
         </g>
 
         <!-- Indicator: dot -->
         <circle
-          v-if="getConfig(i).indicator === 'dot'"
+          v-if="topZoneConfig[i]?.indicator === 'dot'"
           :cx="zone.cx"
           :cy="indicatorCY(zone)"
           :r="DOT_R"
@@ -237,7 +227,7 @@ const verticalDividers: number[] = (() => {
         />
 
         <!-- Indicator: double-dot -->
-        <g v-else-if="getConfig(i).indicator === 'double-dot'">
+        <g v-else-if="topZoneConfig[i]?.indicator === 'double-dot'">
           <circle
             :cx="zone.cx - DOT_R * 2"
             :cy="indicatorCY(zone)"
@@ -254,7 +244,7 @@ const verticalDividers: number[] = (() => {
 
         <!-- Indicator: dash -->
         <rect
-          v-else-if="getConfig(i).indicator === 'dash'"
+          v-else-if="topZoneConfig[i]?.indicator === 'dash'"
           :x="zone.cx - DASH_W / 2"
           :y="indicatorCY(zone) - DASH_H / 2"
           :width="DASH_W"
@@ -265,20 +255,20 @@ const verticalDividers: number[] = (() => {
         />
       </g>
 
-      <!-- Bottom-half zones: icon + indicator (same column config as top) -->
-      <g v-for="(zone, i) in botZones" :key="`bot-${i}`">
+      <!-- Bottom-half zones: icon + indicator -->
+      <g v-for="(zone, i) in botZoneList" :key="`bot-${i}`">
         <!-- MDI Icon -->
         <g
-          v-if="getConfig(i).icon"
+          v-if="botZoneConfig[i]?.icon"
           :transform="iconTransform(zone.cx, zone.cy)"
           :fill="iconColor"
         >
-          <path :d="getConfig(i).icon" />
+          <path :d="botZoneConfig[i].icon" />
         </g>
 
         <!-- Indicator: dot -->
         <circle
-          v-if="getConfig(i).indicator === 'dot'"
+          v-if="botZoneConfig[i]?.indicator === 'dot'"
           :cx="zone.cx"
           :cy="indicatorCY(zone)"
           :r="DOT_R"
@@ -286,7 +276,7 @@ const verticalDividers: number[] = (() => {
         />
 
         <!-- Indicator: double-dot -->
-        <g v-else-if="getConfig(i).indicator === 'double-dot'">
+        <g v-else-if="botZoneConfig[i]?.indicator === 'double-dot'">
           <circle
             :cx="zone.cx - DOT_R * 2"
             :cy="indicatorCY(zone)"
@@ -303,7 +293,7 @@ const verticalDividers: number[] = (() => {
 
         <!-- Indicator: dash -->
         <rect
-          v-else-if="getConfig(i).indicator === 'dash'"
+          v-else-if="botZoneConfig[i]?.indicator === 'dash'"
           :x="zone.cx - DASH_W / 2"
           :y="indicatorCY(zone) - DASH_H / 2"
           :width="DASH_W"
