@@ -34,30 +34,39 @@ test.describe('Screenshots', () => {
     })
   })
 
-  test('1-zone section', async ({ page }) => {
+  test('1+1 zone section', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
-    const section = page.locator('section').filter({ hasText: '1 Zone' })
+    const section = page.locator('section').filter({ hasText: '1 Zone (top) + 1 Zone (bottom)' })
     await section.screenshot({
-      path: path.join(SCREENSHOTS_DIR, 'section-1-zone.png'),
+      path: path.join(SCREENSHOTS_DIR, 'section-1-1-zones.png'),
     })
   })
 
-  test('2-zone section', async ({ page }) => {
+  test('2+2 zone section', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
-    const section = page.locator('section').filter({ hasText: '2 Zones' })
+    const section = page.locator('section').filter({ hasText: '2 Zones (top) + 2 Zones (bottom)' })
     await section.screenshot({
-      path: path.join(SCREENSHOTS_DIR, 'section-2-zones.png'),
+      path: path.join(SCREENSHOTS_DIR, 'section-2-2-zones.png'),
     })
   })
 
-  test('3-zone section', async ({ page }) => {
+  test('3+3 zone section', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
-    const section = page.locator('section').filter({ hasText: '3 Zones' })
+    const section = page.locator('section').filter({ hasText: '3 Zones (top) + 3 Zones (bottom)' })
     await section.screenshot({
-      path: path.join(SCREENSHOTS_DIR, 'section-3-zones.png'),
+      path: path.join(SCREENSHOTS_DIR, 'section-3-3-zones.png'),
+    })
+  })
+
+  test('mixed zone sections', async ({ page }) => {
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    const section = page.locator('section').filter({ hasText: 'Mixed: 3 Zones (top) + 1 Zone (bottom)' })
+    await section.screenshot({
+      path: path.join(SCREENSHOTS_DIR, 'section-mixed-3-1-zones.png'),
     })
   })
 })

@@ -7,11 +7,12 @@ test.describe('App', () => {
     await expect(page.locator('header')).toBeVisible()
   })
 
-  test('displays all three zone sections', async ({ page }) => {
+  test('displays all zone sections', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByText('1 Zone')).toBeVisible()
-    await expect(page.getByText('2 Zones')).toBeVisible()
-    await expect(page.getByText('3 Zones')).toBeVisible()
+    await expect(page.getByText('1 Zone (top) + 1 Zone (bottom)')).toBeVisible()
+    await expect(page.getByText('2 Zones (top) + 2 Zones (bottom)')).toBeVisible()
+    await expect(page.getByText('3 Zones (top) + 3 Zones (bottom)')).toBeVisible()
+    await expect(page.getByText('Mixed: 3 Zones (top) + 1 Zone (bottom)')).toBeVisible()
   })
 
   test('dark mode toggle switches theme', async ({ page }) => {
