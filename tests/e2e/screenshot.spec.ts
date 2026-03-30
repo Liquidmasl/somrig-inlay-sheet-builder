@@ -26,7 +26,7 @@ test.describe('Screenshots', () => {
   test('full page — dark mode (no selection)', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
-    await page.locator('header button').first().click()
+    await page.locator('header button[aria-label*="mode"]').click()
     await page.waitForTimeout(150) // allow transition
     await page.screenshot({
       path: path.join(SCREENSHOTS_DIR, 'full-page-dark.png'),
@@ -47,7 +47,7 @@ test.describe('Screenshots', () => {
   test('editor panel — button selected dark mode', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
-    await page.locator('header button').first().click()
+    await page.locator('header button[aria-label*="mode"]').click()
     await page.waitForTimeout(150)
     await page.locator('main button[aria-label]').first().click()
     await page.waitForTimeout(100)
