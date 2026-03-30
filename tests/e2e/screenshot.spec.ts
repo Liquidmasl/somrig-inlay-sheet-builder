@@ -14,7 +14,7 @@ import path from 'path'
 const SCREENSHOTS_DIR = path.resolve('tests/e2e/screenshots')
 
 test.describe('Screenshots', () => {
-  test('full page — light mode', async ({ page }) => {
+  test('full page — light mode (no selection)', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
     await page.screenshot({
@@ -23,7 +23,7 @@ test.describe('Screenshots', () => {
     })
   })
 
-  test('full page — dark mode', async ({ page }) => {
+  test('full page — dark mode (no selection)', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
     await page.locator('header button').first().click()
@@ -34,39 +34,53 @@ test.describe('Screenshots', () => {
     })
   })
 
-  test('1+1 zone section', async ({ page }) => {
+  test('editor panel — button selected light mode', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
-    const section = page.locator('section').filter({ hasText: '1 Zone (top) + 1 Zone (bottom)' })
-    await section.screenshot({
-      path: path.join(SCREENSHOTS_DIR, 'section-1-1-zones.png'),
+    await page.locator('main button[aria-label]').first().click()
+    await page.waitForTimeout(100)
+    await page.screenshot({
+      path: path.join(SCREENSHOTS_DIR, 'editor-panel-light.png'),
     })
   })
 
-  test('2+2 zone section', async ({ page }) => {
+  test('editor panel — button selected dark mode', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
-    const section = page.locator('section').filter({ hasText: '2 Zones (top) + 2 Zones (bottom)' })
-    await section.screenshot({
-      path: path.join(SCREENSHOTS_DIR, 'section-2-2-zones.png'),
+    await page.locator('header button').first().click()
+    await page.waitForTimeout(150)
+    await page.locator('main button[aria-label]').first().click()
+    await page.waitForTimeout(100)
+    await page.screenshot({
+      path: path.join(SCREENSHOTS_DIR, 'editor-panel-dark.png'),
     })
   })
 
-  test('3+3 zone section', async ({ page }) => {
+  test('editor panel — 3 zones top configured', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
-    const section = page.locator('section').filter({ hasText: '3 Zones (top) + 3 Zones (bottom)' })
-    await section.screenshot({
-      path: path.join(SCREENSHOTS_DIR, 'section-3-3-zones.png'),
+    await page.locator('main button[aria-label]').first().click()
+
+    // Set top to 3 zones
+    const aside = page.locator('aside')
+    await aside.locator('section').first().locator('button').filter({ hasText: '3' }).click()
+
+    await page.waitForTimeout(100)
+    await page.screenshot({
+      path: path.join(SCREENSHOTS_DIR, 'editor-3-zones-top.png'),
     })
   })
 
-  test('mixed zone sections', async ({ page }) => {
+  test('icon picker modal', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
-    const section = page.locator('section').filter({ hasText: 'Mixed: 3 Zones (top) + 1 Zone (bottom)' })
-    await section.screenshot({
-      path: path.join(SCREENSHOTS_DIR, 'section-mixed-3-1-zones.png'),
+    await page.locator('main button[aria-label]').first().click()
+
+    const aside = page.locator('aside')
+    await aside.getByText('No icon — click to add').first().click()
+    await page.waitForTimeout(100)
+    await page.screenshot({
+      path: path.join(SCREENSHOTS_DIR, 'icon-picker-modal.png'),
     })
   })
 })
