@@ -1,226 +1,101 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
+import { mdiPlus } from '@mdi/js'
 import AppHeader from './components/AppHeader.vue'
-import ButtonInlaySVG from './components/ButtonInlaySVG.vue'
+import ButtonInlaySVG, { type ZoneConfig } from './components/ButtonInlaySVG.vue'
+import ButtonEditorPanel from './components/ButtonEditorPanel.vue'
 import { useDarkMode } from './composables/useDarkMode'
-import {
-  mdiLightbulbOutline,
-  mdiFan,
-  mdiThermostat,
-  mdiVolumeHigh,
-  mdiPower,
-  mdiHomeLightbulb,
-  mdiMusicNote,
-  mdiTelevision,
-} from '@mdi/js'
+import { useSheets } from './composables/useSheets'
+import type { ActionType, ActionZone } from './types'
 
 const { init, isDark } = useDarkMode()
 onMounted(() => init())
+
+const { activeSheet, activeSheetId, activeButtonId, addButton } = useSheets()
+
+const strokeColor = computed(() => (isDark.value ? '#ffffff' : '#000000'))
+const fillColor = computed(() => (isDark.value ? '#1f2937' : '#ffffff'))
+
+function actionTypeToIndicator(type: ActionType): 'dot' | 'double-dot' | 'dash' {
+  if (type === 'single') return 'dot'
+  if (type === 'double') return 'double-dot'
+  return 'dash'
+}
+
+function toZoneConfigs(zones: ActionZone[]): ZoneConfig[] {
+  return zones.map(z => ({
+    icon: z.icon ?? undefined,
+    indicator: actionTypeToIndicator(z.type),
+    iconSize: z.iconSize,
+    iconColor: z.iconColor,
+  }))
+}
+
+function selectButton(buttonId: string) {
+  activeButtonId.value = buttonId
+}
+
+function handleAddButton() {
+  const btn = addButton(activeSheetId.value)
+  if (btn) activeButtonId.value = btn.id
+}
 </script>
 
 <template>
-  <div class="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-white transition-colors">
+  <div class="h-screen flex flex-col bg-white dark:bg-gray-950 text-gray-900 dark:text-white transition-colors overflow-hidden">
     <AppHeader />
-    <main class="p-6 space-y-10">
 
-      <!-- 1 Zone top + 1 Zone bottom -->
-      <section>
-        <h2 class="text-lg font-semibold mb-4">1 Zone (top) + 1 Zone (bottom)</h2>
-        <div class="flex gap-8 flex-wrap">
-          <div class="flex flex-col items-center gap-2">
-            <ButtonInlaySVG
-              :top-zones="1"
-              :bot-zones="1"
-              :top-zone-config="[{ icon: mdiLightbulbOutline, indicator: 'dot' }]"
-              :bot-zone-config="[{ icon: mdiFan, indicator: 'dash' }]"
-              :stroke-color="isDark ? '#ffffff' : '#000000'"
-              :icon-color="isDark ? '#ffffff' : '#000000'"
-              :fill-color="isDark ? '#1f2937' : '#ffffff'"
-              :scale="4"
-            />
-            <span class="text-sm text-gray-500">light (dot) / fan (dash)</span>
-          </div>
-          <div class="flex flex-col items-center gap-2">
-            <ButtonInlaySVG
-              :top-zones="1"
-              :bot-zones="1"
-              :top-zone-config="[{ icon: mdiVolumeHigh, indicator: 'double-dot' }]"
-              :bot-zone-config="[{ icon: mdiPower, indicator: 'dot' }]"
-              :stroke-color="isDark ? '#ffffff' : '#000000'"
-              :icon-color="isDark ? '#ffffff' : '#000000'"
-              :fill-color="isDark ? '#1f2937' : '#ffffff'"
-              :scale="4"
-            />
-            <span class="text-sm text-gray-500">volume (double-dot) / power (dot)</span>
-          </div>
+    <div class="flex flex-1 overflow-hidden">
+      <!-- Sheet canvas -->
+      <main class="flex-1 overflow-auto p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-semibold text-gray-700 dark:text-gray-300">
+            {{ activeSheet?.name ?? 'Sheet' }}
+          </h2>
         </div>
-      </section>
 
-      <!-- 2 Zones top + 2 Zones bottom -->
-      <section>
-        <h2 class="text-lg font-semibold mb-4">2 Zones (top) + 2 Zones (bottom)</h2>
-        <div class="flex gap-8 flex-wrap">
-          <div class="flex flex-col items-center gap-2">
+        <div class="flex flex-wrap gap-5 items-start">
+          <!-- Button inlays -->
+          <button
+            v-for="btn in activeSheet?.buttons"
+            :key="btn.id"
+            class="relative rounded-xl p-2 transition-all focus:outline-none"
+            :class="
+              activeButtonId === btn.id
+                ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950/30'
+                : 'hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+            "
+            :aria-label="`Select button ${btn.id}`"
+            @click="selectButton(btn.id)"
+          >
             <ButtonInlaySVG
-              :top-zones="2"
-              :bot-zones="2"
-              :top-zone-config="[
-                { icon: mdiLightbulbOutline, indicator: 'dot' },
-                { icon: mdiFan, indicator: 'dash' },
-              ]"
-              :bot-zone-config="[
-                { icon: mdiThermostat, indicator: 'double-dot' },
-                { icon: mdiVolumeHigh, indicator: 'dot' },
-              ]"
-              :stroke-color="isDark ? '#ffffff' : '#000000'"
-              :icon-color="isDark ? '#ffffff' : '#000000'"
-              :fill-color="isDark ? '#1f2937' : '#ffffff'"
-              :scale="4"
+              :top-zones="(btn.top.zones.length as 1 | 2 | 3)"
+              :bot-zones="(btn.bottom.zones.length as 1 | 2 | 3)"
+              :top-zone-config="toZoneConfigs(btn.top.zones)"
+              :bot-zone-config="toZoneConfigs(btn.bottom.zones)"
+              :stroke-color="strokeColor"
+              :fill-color="fillColor"
+              :scale="3"
             />
-            <span class="text-sm text-gray-500">light+fan / thermo+volume</span>
-          </div>
-          <div class="flex flex-col items-center gap-2">
-            <ButtonInlaySVG
-              :top-zones="2"
-              :bot-zones="2"
-              :top-zone-config="[
-                { icon: mdiPower, indicator: 'dot' },
-                { icon: mdiHomeLightbulb, indicator: 'dash' },
-              ]"
-              :bot-zone-config="[
-                { icon: mdiMusicNote, indicator: 'dot' },
-                { icon: mdiTelevision, indicator: 'double-dot' },
-              ]"
-              :stroke-color="isDark ? '#ffffff' : '#000000'"
-              :icon-color="isDark ? '#ffffff' : '#000000'"
-              :fill-color="isDark ? '#1f2937' : '#ffffff'"
-              :scale="4"
-            />
-            <span class="text-sm text-gray-500">power+home / music+tv</span>
-          </div>
+          </button>
+
+          <!-- Add button -->
+          <button
+            class="flex items-center justify-center w-[calc(41.2mm*3)] h-[calc(71.9mm*3)] rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+            title="Add button"
+            @click="handleAddButton"
+          >
+            <svg viewBox="0 0 24 24" class="w-8 h-8" fill="currentColor">
+              <path :d="mdiPlus" />
+            </svg>
+          </button>
         </div>
-      </section>
+      </main>
 
-      <!-- 3 Zones top + 3 Zones bottom -->
-      <section>
-        <h2 class="text-lg font-semibold mb-4">3 Zones (top) + 3 Zones (bottom)</h2>
-        <div class="flex gap-8 flex-wrap">
-          <div class="flex flex-col items-center gap-2">
-            <ButtonInlaySVG
-              :top-zones="3"
-              :bot-zones="3"
-              :top-zone-config="[
-                { icon: mdiLightbulbOutline, indicator: 'dot' },
-                { icon: mdiFan, indicator: 'dash' },
-                { icon: mdiHomeLightbulb, indicator: 'double-dot' },
-              ]"
-              :bot-zone-config="[
-                { icon: mdiPower, indicator: 'dot' },
-                { icon: mdiThermostat, indicator: 'dash' },
-                { icon: mdiVolumeHigh, indicator: 'double-dot' },
-              ]"
-              :stroke-color="isDark ? '#ffffff' : '#000000'"
-              :icon-color="isDark ? '#ffffff' : '#000000'"
-              :fill-color="isDark ? '#1f2937' : '#ffffff'"
-              :scale="4"
-            />
-            <span class="text-sm text-gray-500">light+fan+home / power+thermo+volume</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Mixed: 3 Zones top + 1 Zone bottom -->
-      <section>
-        <h2 class="text-lg font-semibold mb-4">Mixed: 3 Zones (top) + 1 Zone (bottom)</h2>
-        <div class="flex gap-8 flex-wrap">
-          <div class="flex flex-col items-center gap-2">
-            <ButtonInlaySVG
-              :top-zones="3"
-              :bot-zones="1"
-              :top-zone-config="[
-                { icon: mdiLightbulbOutline, indicator: 'dot' },
-                { icon: mdiFan, indicator: 'dash' },
-                { icon: mdiHomeLightbulb, indicator: 'double-dot' },
-              ]"
-              :bot-zone-config="[
-                { icon: mdiPower, indicator: 'dot' },
-              ]"
-              :stroke-color="isDark ? '#ffffff' : '#000000'"
-              :icon-color="isDark ? '#ffffff' : '#000000'"
-              :fill-color="isDark ? '#1f2937' : '#ffffff'"
-              :scale="4"
-            />
-            <span class="text-sm text-gray-500">3 top zones / 1 bottom zone</span>
-          </div>
-          <div class="flex flex-col items-center gap-2">
-            <ButtonInlaySVG
-              :top-zones="1"
-              :bot-zones="3"
-              :top-zone-config="[
-                { icon: mdiThermostat, indicator: 'dot' },
-              ]"
-              :bot-zone-config="[
-                { icon: mdiMusicNote, indicator: 'dot' },
-                { icon: mdiTelevision, indicator: 'dash' },
-                { icon: mdiVolumeHigh, indicator: 'double-dot' },
-              ]"
-              :stroke-color="isDark ? '#ffffff' : '#000000'"
-              :icon-color="isDark ? '#ffffff' : '#000000'"
-              :fill-color="isDark ? '#1f2937' : '#ffffff'"
-              :scale="4"
-            />
-            <span class="text-sm text-gray-500">1 top zone / 3 bottom zones</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Mixed: 2 Zones top + 3 Zones bottom -->
-      <section>
-        <h2 class="text-lg font-semibold mb-4">Mixed: 2 Zones (top) + 3 Zones (bottom)</h2>
-        <div class="flex gap-8 flex-wrap">
-          <div class="flex flex-col items-center gap-2">
-            <ButtonInlaySVG
-              :top-zones="2"
-              :bot-zones="3"
-              :top-zone-config="[
-                { icon: mdiLightbulbOutline, indicator: 'dot' },
-                { icon: mdiFan, indicator: 'dash' },
-              ]"
-              :bot-zone-config="[
-                { icon: mdiPower, indicator: 'dot' },
-                { icon: mdiThermostat, indicator: 'dash' },
-                { icon: mdiVolumeHigh, indicator: 'double-dot' },
-              ]"
-              :stroke-color="isDark ? '#ffffff' : '#000000'"
-              :icon-color="isDark ? '#ffffff' : '#000000'"
-              :fill-color="isDark ? '#1f2937' : '#ffffff'"
-              :scale="4"
-            />
-            <span class="text-sm text-gray-500">2 top zones / 3 bottom zones</span>
-          </div>
-          <div class="flex flex-col items-center gap-2">
-            <ButtonInlaySVG
-              :top-zones="3"
-              :bot-zones="2"
-              :top-zone-config="[
-                { icon: mdiHomeLightbulb, indicator: 'dot' },
-                { icon: mdiMusicNote, indicator: 'dash' },
-                { icon: mdiTelevision, indicator: 'double-dot' },
-              ]"
-              :bot-zone-config="[
-                { icon: mdiPower, indicator: 'dot' },
-                { icon: mdiVolumeHigh, indicator: 'dash' },
-              ]"
-              :stroke-color="isDark ? '#ffffff' : '#000000'"
-              :icon-color="isDark ? '#ffffff' : '#000000'"
-              :fill-color="isDark ? '#1f2937' : '#ffffff'"
-              :scale="4"
-            />
-            <span class="text-sm text-gray-500">3 top zones / 2 bottom zones</span>
-          </div>
-        </div>
-      </section>
-
-    </main>
+      <!-- Editor panel -->
+      <aside class="w-80 shrink-0 border-l border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col">
+        <ButtonEditorPanel />
+      </aside>
+    </div>
   </div>
 </template>

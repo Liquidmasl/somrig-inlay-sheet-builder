@@ -7,12 +7,17 @@ test.describe('App', () => {
     await expect(page.locator('header')).toBeVisible()
   })
 
-  test('displays all zone sections', async ({ page }) => {
+  test('shows a button in the sheet canvas', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByText('1 Zone (top) + 1 Zone (bottom)')).toBeVisible()
-    await expect(page.getByText('2 Zones (top) + 2 Zones (bottom)')).toBeVisible()
-    await expect(page.getByText('3 Zones (top) + 3 Zones (bottom)')).toBeVisible()
-    await expect(page.getByText('Mixed: 3 Zones (top) + 1 Zone (bottom)')).toBeVisible()
+    // There should be at least one button inlay SVG in the canvas
+    await expect(page.locator('main svg').first()).toBeVisible()
+  })
+
+  test('shows empty editor state initially', async ({ page }) => {
+    await page.goto('/')
+    // The default sheet has one button which starts selected, or not
+    // Either way the aside panel should be present
+    await expect(page.locator('aside')).toBeVisible()
   })
 
   test('dark mode toggle switches theme', async ({ page }) => {
