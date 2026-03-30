@@ -74,7 +74,7 @@ function onSetZoneType(half: 'top' | 'bottom', zoneIndex: number, type: ActionTy
 </script>
 
 <template>
-  <div class="h-full flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
+  <div class="min-h-[300px] md:h-full flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
     <!-- Empty state -->
     <div
       v-if="!activeButton"
