@@ -118,9 +118,12 @@ test.describe('Button Editor Panel', () => {
     const searchInput = page.getByPlaceholder('Search icons...')
     await expect(searchInput).toBeVisible()
 
-    // Type a search query
-    await searchInput.fill('fan')
-    // Grid should be filtered
+    // Wait for icons to load (lazy-loaded on first open)
+    await expect(page.locator('.fixed .grid button').first()).toBeVisible()
+
+    // Type a search query that matches exactly 1 icon ("abacus" → "Abacus")
+    await searchInput.fill('abacus')
+    // Grid should be filtered to exactly 1 result (debounce settles within 5s retry window)
     await expect(page.locator('.fixed .grid button')).toHaveCount(1)
   })
 
