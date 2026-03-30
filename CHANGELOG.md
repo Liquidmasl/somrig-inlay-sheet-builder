@@ -11,6 +11,9 @@
 
 ## [Unreleased]
 
+### Added
+- **Dark mode, responsive layout, and footer** — Dark mode now applies instantly on load with no flash (theme is read from `localStorage` / `prefers-color-scheme` before Vue renders). Button inlay SVG previews always use a white background and black ink regardless of theme, matching print output. The layout is now responsive: on mobile the sheet canvas appears on top with the editor panel below; on desktop the side-by-side panel layout is preserved. A small footer crediting Aasikki's original template has been added. ([LQM-74](https://linear.app/liquidmasl/issue/LQM-74/dark-mode-polish), [#15](https://github.com/Liquidmasl/somrig-inlay-sheet-builder/pull/15))
+
 ### Changed
 - **UI layout and usability** — Button inlays are now displayed at a smaller scale so the entire canvas and editor panel are visible without zooming out. The redundant SVG preview in the editor panel has been removed; edits are reflected directly on the selected button in the canvas. Zone type selectors (single/hold/double) are now shown per zone, allowing any combination — e.g. a button with two "double" zones is now possible. ([LQM-80](https://linear.app/liquidmasl/issue/LQM-80/ui-pass), [#11](https://github.com/Liquidmasl/somrig-inlay-sheet-builder/pull/11))
 
