@@ -28,24 +28,26 @@ test.describe('ButtonInlaySVG', () => {
     await expect(svgs.first()).toBeVisible()
   })
 
-  test('selecting a button shows SVG preview in editor panel', async ({ page }) => {
-    await page.locator('main button[aria-label]').first().click()
-    // Editor panel should contain an SVG preview
-    const previewSvg = page.locator('aside svg').first()
-    await expect(previewSvg).toBeVisible()
+  test('selecting a button highlights it and shows editor controls', async ({ page }) => {
+    const btn = page.locator('main button[aria-label]').first()
+    await btn.click()
+    // Selected button gets the blue ring
+    await expect(btn).toHaveClass(/ring-blue-500/)
+    // Editor controls appear
+    await expect(page.getByText('Top Half')).toBeVisible()
   })
 
-  test('zone count change reflects in editor SVG preview', async ({ page }) => {
+  test('zone count change reflects in canvas SVG (via editor)', async ({ page }) => {
     await page.locator('main button[aria-label]').first().click()
 
-    const aside = page.locator('aside')
-    const svgBefore = await aside.locator('svg').first().innerHTML()
+    const selectedBtn = page.locator('main button[aria-label]').first()
+    const svgBefore = await selectedBtn.locator('svg').first().innerHTML()
 
     // Change top half to 3 zones (Top Half is the first section)
-    await aside.locator('section').first().locator('button').filter({ hasText: '3' }).click()
+    await page.locator('aside').locator('section').first().locator('button').filter({ hasText: '3' }).click()
     await page.waitForTimeout(100)
 
-    const svgAfter = await aside.locator('svg').first().innerHTML()
+    const svgAfter = await selectedBtn.locator('svg').first().innerHTML()
     expect(svgAfter).not.toBe(svgBefore)
   })
 

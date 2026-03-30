@@ -1,11 +1,7 @@
 import { ref, computed } from 'vue'
 import type { ActionType, ActionZone, ButtonInlay, Sheet } from '../types'
 
-const ZONE_TYPES: Record<1 | 2 | 3, ActionType[]> = {
-  1: ['single'],
-  2: ['single', 'hold'],
-  3: ['single', 'double', 'hold'],
-}
+const DEFAULT_ZONE_TYPES: ActionType[] = ['single', 'hold', 'double']
 
 function createDefaultZone(type: ActionType = 'single'): ActionZone {
   return {
@@ -100,12 +96,11 @@ export function useSheets() {
     const button = findButton(buttonId)
     if (!button) return
     const phys = half === 'top' ? button.top : button.bottom
-    const types = ZONE_TYPES[count]
-    phys.zones = types.map((type, i) => ({
-      ...createDefaultZone(type),
-      ...phys.zones[i],
-      type,
-    }))
+    const current = phys.zones
+    phys.zones = Array.from({ length: count }, (_, i) => {
+      if (i < current.length) return current[i]
+      return createDefaultZone(DEFAULT_ZONE_TYPES[i] ?? 'single')
+    })
   }
 
   function updateZone(
