@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import type { ActionType, ActionZone, ButtonInlay, Sheet } from '../types'
+import type { ActionType, ActionZone, ButtonInlay, IndicatorPosition, SeparatorStyle, Sheet } from '../types'
 
 const DEFAULT_ZONE_TYPES: ActionType[] = ['single', 'hold', 'double']
 
@@ -12,11 +12,19 @@ function createDefaultZone(type: ActionType = 'single'): ActionZone {
   }
 }
 
+const DEFAULT_SEPARATOR: SeparatorStyle = {
+  thickness: 0.3,
+  color: '#000000',
+  style: 'solid',
+}
+
 function createDefaultButtonInlay(id: string): ButtonInlay {
   return {
     id,
-    top: { zones: [createDefaultZone()] },
-    bottom: { zones: [createDefaultZone()] },
+    top: { zones: [createDefaultZone()], indicatorPosition: 'inner' },
+    bottom: { zones: [createDefaultZone()], indicatorPosition: 'inner' },
+    horizontalSeparator: { ...DEFAULT_SEPARATOR },
+    verticalSeparator: { ...DEFAULT_SEPARATOR },
   }
 }
 
@@ -117,6 +125,28 @@ export function useSheets() {
     }
   }
 
+  function setIndicatorPosition(
+    buttonId: string,
+    half: 'top' | 'bottom',
+    position: IndicatorPosition,
+  ): void {
+    const button = findButton(buttonId)
+    if (!button) return
+    const phys = half === 'top' ? button.top : button.bottom
+    phys.indicatorPosition = position
+  }
+
+  function updateSeparator(
+    buttonId: string,
+    separatorType: 'horizontal' | 'vertical',
+    patch: Partial<SeparatorStyle>,
+  ): void {
+    const button = findButton(buttonId)
+    if (!button) return
+    const separator = separatorType === 'horizontal' ? button.horizontalSeparator : button.verticalSeparator
+    Object.assign(separator, patch)
+  }
+
   return {
     sheets,
     activeSheetId,
@@ -129,5 +159,7 @@ export function useSheets() {
     removeButton,
     setZoneCount,
     updateZone,
+    setIndicatorPosition,
+    updateSeparator,
   }
 }
