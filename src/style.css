@@ -1,3 +1,53 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+@media print {
+  /* Hide everything by default */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only the print area and its children */
+  #print-area,
+  #print-area * {
+    visibility: visible;
+  }
+
+  /* Reset page layout so print area fills the page from top-left */
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  #print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5mm;
+    padding: 10mm;
+    background: white;
+  }
+
+  /* Hide elements explicitly marked as no-print */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Force each button wrapper to have no extra padding/ring */
+  #print-area button:not(.no-print) {
+    padding: 0 !important;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  /* Force SVGs to render at the exact physical Somrig button size */
+  #print-area svg {
+    width: 41.2mm !important;
+    height: 71.9mm !important;
+  }
+}
