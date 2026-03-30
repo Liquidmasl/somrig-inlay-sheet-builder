@@ -75,13 +75,13 @@ function handleAddButton() {
               :bot-zone-config="toZoneConfigs(btn.bottom.zones)"
               :stroke-color="strokeColor"
               :fill-color="fillColor"
-              :scale="3"
+              :scale="1.5"
             />
           </button>
 
           <!-- Add button -->
           <button
-            class="flex items-center justify-center w-[calc(41.2mm*3)] h-[calc(71.9mm*3)] rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+            class="flex items-center justify-center w-[calc(41.2mm*1.5)] h-[calc(71.9mm*1.5)] rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
             title="Add button"
             @click="handleAddButton"
           >
