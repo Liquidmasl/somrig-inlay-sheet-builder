@@ -11,6 +11,12 @@ const { activeButton, setZoneCount, updateZone } = useSheets()
 const pickerOpen = ref(false)
 const pickerTarget = ref<{ half: 'top' | 'bottom'; zoneIndex: number } | null>(null)
 
+const currentPickerIcon = computed(() => {
+  if (!activeButton.value || !pickerTarget.value) return null
+  const { half, zoneIndex } = pickerTarget.value
+  return activeButton.value[half].zones[zoneIndex]?.icon ?? null
+})
+
 function openIconPicker(half: 'top' | 'bottom', zoneIndex: number) {
   pickerTarget.value = { half, zoneIndex }
   pickerOpen.value = true
@@ -323,6 +329,7 @@ function onSetZoneType(half: 'top' | 'bottom', zoneIndex: number, type: ActionTy
     <!-- Icon picker modal -->
     <IconPickerModal
       :open="pickerOpen"
+      :current-icon="currentPickerIcon"
       @close="pickerOpen = false"
       @select="handleIconSelect"
     />
