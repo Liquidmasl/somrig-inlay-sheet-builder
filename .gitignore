@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Playwright
+playwright-report/
+test-results/
+# Screenshot output — add specific files to git manually when attaching to PRs
+tests/e2e/screenshots/*.png
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

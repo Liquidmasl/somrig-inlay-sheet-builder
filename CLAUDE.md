@@ -72,10 +72,27 @@ tsconfig.node.json      # Node/vite TS config
 ## Scripts
 
 ```bash
-npm run dev      # Vite dev server
-npm run build    # Type-check (vue-tsc) then Vite build → dist/
-npm run preview  # Preview production build
+npm run dev            # Vite dev server
+npm run build          # Type-check (vue-tsc) then Vite build → dist/
+npm run preview        # Preview production build
+npm run test:e2e       # Run all Playwright e2e tests (starts dev server automatically)
+npm run test:e2e:ui    # Playwright UI mode for interactive debugging
+npm run screenshot     # Capture screenshots to tests/e2e/screenshots/
 ```
+
+## Testing
+
+Playwright is used for e2e tests. Config: `playwright.config.ts`. Tests live in `tests/e2e/`.
+
+| File | Purpose |
+|------|---------|
+| `tests/e2e/app.spec.ts` | App load, header visibility, dark mode toggle |
+| `tests/e2e/button-inlay-svg.spec.ts` | SVG rendering, zone variants, indicator labels |
+| `tests/e2e/screenshot.spec.ts` | Screenshot capture for PR documentation |
+
+**Screenshots** are written to `tests/e2e/screenshots/` (gitignored by default).
+To include a screenshot in a PR: `git add -f tests/e2e/screenshots/<file>.png`
+Future PRs should run `npm run screenshot` and attach relevant screenshots to the PR body.
 
 ---
 

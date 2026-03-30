@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "screenshot": "playwright test tests/e2e/screenshot.spec.ts"
   },
   "dependencies": {
     "@mdi/js": "^7.4.47",
@@ -15,6 +18,7 @@
     "vue": "^3.5.30"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/node": "^24.12.0",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vue/tsconfig": "^0.9.0",
