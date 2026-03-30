@@ -2,13 +2,10 @@
 import { ref, computed } from 'vue'
 import { mdiImageOffOutline } from '@mdi/js'
 import { useSheets } from '../composables/useSheets'
-import { useDarkMode } from '../composables/useDarkMode'
-import ButtonInlaySVG, { type ZoneConfig } from './ButtonInlaySVG.vue'
 import IconPickerModal from './IconPickerModal.vue'
-import type { ActionType, ActionZone } from '../types'
+import type { ActionType } from '../types'
 
 const { activeButton, setZoneCount, updateZone } = useSheets()
-const { isDark } = useDarkMode()
 
 // Icon picker state
 const pickerOpen = ref(false)
@@ -31,12 +28,6 @@ function clearIcon(half: 'top' | 'bottom', zoneIndex: number) {
   updateZone(activeButton.value.id, half, zoneIndex, { icon: null })
 }
 
-function actionTypeToIndicator(type: ActionType): 'dot' | 'double-dot' | 'dash' {
-  if (type === 'single') return 'dot'
-  if (type === 'double') return 'double-dot'
-  return 'dash'
-}
-
 function actionTypeLabel(type: ActionType): string {
   if (type === 'single') return 'Single'
   if (type === 'double') return 'Double'
@@ -49,23 +40,10 @@ function indicatorSymbol(type: ActionType): string {
   return '▬'
 }
 
-function toZoneConfigs(zones: ActionZone[]): ZoneConfig[] {
-  return zones.map(z => ({
-    icon: z.icon ?? undefined,
-    indicator: actionTypeToIndicator(z.type),
-    iconSize: z.iconSize,
-    iconColor: z.iconColor,
-  }))
-}
-
-const topZoneConfigs = computed(() => toZoneConfigs(activeButton.value?.top.zones ?? []))
-const botZoneConfigs = computed(() => toZoneConfigs(activeButton.value?.bottom.zones ?? []))
-
 const topZoneCount = computed(() => (activeButton.value?.top.zones.length ?? 1) as 1 | 2 | 3)
 const botZoneCount = computed(() => (activeButton.value?.bottom.zones.length ?? 1) as 1 | 2 | 3)
 
-const strokeColor = computed(() => (isDark.value ? '#ffffff' : '#000000'))
-const fillColor = computed(() => (isDark.value ? '#1f2937' : '#ffffff'))
+const ACTION_TYPES: ActionType[] = ['single', 'hold', 'double']
 
 function onSetZoneCount(half: 'top' | 'bottom', count: 1 | 2 | 3) {
   if (!activeButton.value) return
@@ -80,6 +58,11 @@ function onUpdateZone(
 ) {
   if (!activeButton.value) return
   updateZone(activeButton.value.id, half, zoneIndex, { [field]: value })
+}
+
+function onSetZoneType(half: 'top' | 'bottom', zoneIndex: number, type: ActionType) {
+  if (!activeButton.value) return
+  updateZone(activeButton.value.id, half, zoneIndex, { type })
 }
 
 </script>
@@ -99,19 +82,6 @@ function onUpdateZone(
 
     <!-- Editor -->
     <template v-else>
-      <!-- Live preview -->
-      <div class="flex justify-center py-6 border-b border-gray-200 dark:border-gray-700">
-        <ButtonInlaySVG
-          :top-zones="topZoneCount"
-          :bot-zones="botZoneCount"
-          :top-zone-config="topZoneConfigs"
-          :bot-zone-config="botZoneConfigs"
-          :stroke-color="strokeColor"
-          :fill-color="fillColor"
-          :scale="4"
-        />
-      </div>
-
       <!-- Scrollable controls -->
       <div class="flex-1 overflow-y-auto p-4 space-y-6">
         <!-- Top half -->
@@ -147,14 +117,27 @@ function onUpdateZone(
               :key="i"
               class="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3"
             >
-              <!-- Zone header -->
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">
+              <!-- Zone header with type selector -->
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 shrink-0">
                   Zone {{ i + 1 }}
                 </span>
-                <span class="text-xs text-gray-400">
-                  {{ indicatorSymbol(zone.type) }} {{ actionTypeLabel(zone.type) }}
-                </span>
+                <div class="inline-flex rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <button
+                    v-for="t in ACTION_TYPES"
+                    :key="t"
+                    class="px-2 py-0.5 text-xs font-medium transition-colors"
+                    :class="
+                      zone.type === t
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    "
+                    :aria-label="`Set zone ${i + 1} type to ${actionTypeLabel(t)}`"
+                    @click="onSetZoneType('top', i, t)"
+                  >
+                    {{ indicatorSymbol(t) }}
+                  </button>
+                </div>
               </div>
 
               <!-- Icon picker -->
@@ -251,14 +234,27 @@ function onUpdateZone(
               :key="i"
               class="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3"
             >
-              <!-- Zone header -->
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">
+              <!-- Zone header with type selector -->
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 shrink-0">
                   Zone {{ i + 1 }}
                 </span>
-                <span class="text-xs text-gray-400">
-                  {{ indicatorSymbol(zone.type) }} {{ actionTypeLabel(zone.type) }}
-                </span>
+                <div class="inline-flex rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <button
+                    v-for="t in ACTION_TYPES"
+                    :key="t"
+                    class="px-2 py-0.5 text-xs font-medium transition-colors"
+                    :class="
+                      zone.type === t
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    "
+                    :aria-label="`Set zone ${i + 1} type to ${actionTypeLabel(t)}`"
+                    @click="onSetZoneType('bottom', i, t)"
+                  >
+                    {{ indicatorSymbol(t) }}
+                  </button>
+                </div>
               </div>
 
               <!-- Icon picker -->

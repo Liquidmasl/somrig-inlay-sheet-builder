@@ -14,47 +14,39 @@ test.describe('Button Editor Panel', () => {
     await expect(page.getByText('Bottom Half')).toBeVisible()
   })
 
-  test('live preview appears in editor panel', async ({ page }) => {
-    // SVG preview should be visible in the aside panel
-    await expect(page.locator('aside svg').first()).toBeVisible()
-  })
-
   test('zone count segmented controls are visible', async ({ page }) => {
-    // Should have zone count buttons (1, 2, 3) for top and bottom halves
-    const zoneButtons = page.getByText('1').filter({ has: page.locator('button') })
     // Look for the segmented control buttons
-    const topSection = page.locator('aside').getByText('Top Half').locator('..')
     await expect(page.locator('aside').getByText('Zones').first()).toBeVisible()
   })
 
-  test('changing top zone count updates the live preview', async ({ page }) => {
-    const aside = page.locator('aside')
+  test('changing top zone count updates the canvas button', async ({ page }) => {
+    const selectedBtn = page.locator('main button[aria-label]').first()
+    const svgBefore = await selectedBtn.locator('svg').first().innerHTML()
 
     // The "Top Half" section contains the first set of zone count buttons
-    const topSection = aside.locator('section').first()
-    const svgBefore = await aside.locator('svg').first().innerHTML()
+    const topSection = page.locator('aside').locator('section').first()
 
     // Click "3" zones for top half
     await topSection.locator('button').filter({ hasText: '3' }).click()
     await page.waitForTimeout(100)
 
-    // SVG should have changed (new vertical dividers added for 3 zones)
-    const svgAfter = await aside.locator('svg').first().innerHTML()
+    // Canvas SVG should have changed (new vertical dividers added for 3 zones)
+    const svgAfter = await selectedBtn.locator('svg').first().innerHTML()
     expect(svgAfter).not.toBe(svgBefore)
   })
 
-  test('changing bottom zone count updates the live preview', async ({ page }) => {
-    const aside = page.locator('aside')
+  test('changing bottom zone count updates the canvas button', async ({ page }) => {
+    const selectedBtn = page.locator('main button[aria-label]').first()
+    const svgBefore = await selectedBtn.locator('svg').first().innerHTML()
 
     // The "Bottom Half" section is the second section
-    const botSection = aside.locator('section').nth(1)
-    const svgBefore = await aside.locator('svg').first().innerHTML()
+    const botSection = page.locator('aside').locator('section').nth(1)
 
     // Click "3" zones for bottom half
     await botSection.locator('button').filter({ hasText: '3' }).click()
     await page.waitForTimeout(100)
 
-    const svgAfter = await aside.locator('svg').first().innerHTML()
+    const svgAfter = await selectedBtn.locator('svg').first().innerHTML()
     expect(svgAfter).not.toBe(svgBefore)
   })
 
@@ -95,11 +87,12 @@ test.describe('Button Editor Panel', () => {
     await expect(page.getByText('Pick Icon')).not.toBeVisible()
   })
 
-  test('selecting an icon updates the preview', async ({ page }) => {
+  test('selecting an icon updates the canvas button', async ({ page }) => {
     const aside = page.locator('aside')
+    const selectedBtn = page.locator('main button[aria-label]').first()
 
-    // Capture preview before picking icon
-    const svgBefore = await aside.locator('svg').first().innerHTML()
+    // Capture canvas SVG before picking icon
+    const svgBefore = await selectedBtn.locator('svg').first().innerHTML()
 
     // Open icon picker and select the first icon
     await aside.getByText('No icon — click to add').first().click()
@@ -112,8 +105,8 @@ test.describe('Button Editor Panel', () => {
     // Modal should close
     await expect(page.getByText('Pick Icon')).not.toBeVisible()
 
-    // SVG preview should have changed (icon path added)
-    const svgAfter = await aside.locator('svg').first().innerHTML()
+    // Canvas SVG should have changed (icon path added)
+    const svgAfter = await selectedBtn.locator('svg').first().innerHTML()
     expect(svgAfter).not.toBe(svgBefore)
   })
 
@@ -160,5 +153,43 @@ test.describe('Button Editor Panel', () => {
     // First should no longer be selected
     const firstAfter = await canvasButtons.first().getAttribute('class')
     expect(firstAfter).not.toContain('ring-blue-500')
+  })
+
+  test('zone type selector is visible for each zone', async ({ page }) => {
+    const aside = page.locator('aside')
+    // Each zone card should have type toggle buttons (● ●● ▬)
+    await expect(aside.locator('button[aria-label*="Set zone"]').first()).toBeVisible()
+  })
+
+  test('zone type selector changes the zone type indicator in canvas', async ({ page }) => {
+    const selectedBtn = page.locator('main button[aria-label]').first()
+    const svgBefore = await selectedBtn.locator('svg').first().innerHTML()
+
+    // Click the "●●" (double) type button for zone 1 in top half
+    const aside = page.locator('aside')
+    const topSection = aside.locator('section').first()
+    await topSection.locator('button[aria-label="Set zone 1 type to Double"]').click()
+    await page.waitForTimeout(100)
+
+    // Canvas SVG should have changed (indicator changed from dot to double-dot)
+    const svgAfter = await selectedBtn.locator('svg').first().innerHTML()
+    expect(svgAfter).not.toBe(svgBefore)
+  })
+
+  test('zone type can be set to any type independently', async ({ page }) => {
+    const aside = page.locator('aside')
+
+    // Set top to 2 zones
+    const topSection = aside.locator('section').first()
+    await topSection.locator('button').filter({ hasText: '2' }).click()
+    await page.waitForTimeout(100)
+
+    // Now change zone 1 type to Hold (▬)
+    await topSection.locator('button[aria-label="Set zone 1 type to Hold"]').click()
+    await page.waitForTimeout(100)
+
+    // The type button for Hold should be active (blue)
+    const holdBtn = topSection.locator('button[aria-label="Set zone 1 type to Hold"]')
+    await expect(holdBtn).toHaveClass(/bg-blue-600/)
   })
 })
