@@ -54,7 +54,7 @@ function handleAddButton() {
           </h2>
         </div>
 
-        <div class="flex flex-wrap gap-5 items-start">
+        <div id="print-area" class="flex flex-wrap gap-5 items-start">
           <!-- Button inlays -->
           <button
             v-for="btn in activeSheet?.buttons"
@@ -79,9 +79,9 @@ function handleAddButton() {
             />
           </button>
 
-          <!-- Add button -->
+          <!-- Add button — hidden in print -->
           <button
-            class="flex items-center justify-center w-[calc(41.2mm*1.5)] h-[calc(71.9mm*1.5)] rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+            class="no-print flex items-center justify-center w-[calc(41.2mm*1.5)] h-[calc(71.9mm*1.5)] rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
             title="Add button"
             @click="handleAddButton"
           >

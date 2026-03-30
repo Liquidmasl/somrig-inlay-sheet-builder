@@ -20,7 +20,7 @@ test.describe('ButtonInlaySVG', () => {
   })
 
   test('renders correctly in dark mode', async ({ page }) => {
-    const toggleBtn = page.locator('header button').first()
+    const toggleBtn = page.locator('header button[aria-label*="mode"]')
     await toggleBtn.click()
     await expect(page.locator('html')).toHaveClass(/dark/)
 

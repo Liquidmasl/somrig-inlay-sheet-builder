@@ -24,7 +24,7 @@ test.describe('App', () => {
     await page.goto('/')
 
     const html = page.locator('html')
-    const toggleBtn = page.locator('header button').first()
+    const toggleBtn = page.locator('header button[aria-label*="mode"]')
 
     // Start in light mode (no dark class)
     await expect(html).not.toHaveClass(/dark/)
