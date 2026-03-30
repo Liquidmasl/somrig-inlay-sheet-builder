@@ -1,11 +1,17 @@
 import { ref, computed } from 'vue'
-import type { ActionZone, ButtonInlay, Sheet } from '../types'
+import type { ActionType, ActionZone, ButtonInlay, Sheet } from '../types'
 
-function createDefaultZone(): ActionZone {
+const ZONE_TYPES: Record<1 | 2 | 3, ActionType[]> = {
+  1: ['single'],
+  2: ['single', 'hold'],
+  3: ['single', 'double', 'hold'],
+}
+
+function createDefaultZone(type: ActionType = 'single'): ActionZone {
   return {
-    type: 'single',
+    type,
     icon: null,
-    iconSize: 20,
+    iconSize: 12,
     iconColor: '#000000',
   }
 }
@@ -82,6 +88,40 @@ export function useSheets() {
     }
   }
 
+  function findButton(buttonId: string): ButtonInlay | null {
+    for (const sheet of sheets.value) {
+      const btn = sheet.buttons.find(b => b.id === buttonId)
+      if (btn) return btn
+    }
+    return null
+  }
+
+  function setZoneCount(buttonId: string, half: 'top' | 'bottom', count: 1 | 2 | 3): void {
+    const button = findButton(buttonId)
+    if (!button) return
+    const phys = half === 'top' ? button.top : button.bottom
+    const types = ZONE_TYPES[count]
+    phys.zones = types.map((type, i) => ({
+      ...createDefaultZone(type),
+      ...phys.zones[i],
+      type,
+    }))
+  }
+
+  function updateZone(
+    buttonId: string,
+    half: 'top' | 'bottom',
+    zoneIndex: number,
+    patch: Partial<ActionZone>,
+  ): void {
+    const button = findButton(buttonId)
+    if (!button) return
+    const phys = half === 'top' ? button.top : button.bottom
+    if (zoneIndex >= 0 && zoneIndex < phys.zones.length) {
+      Object.assign(phys.zones[zoneIndex], patch)
+    }
+  }
+
   return {
     sheets,
     activeSheetId,
@@ -92,5 +132,7 @@ export function useSheets() {
     removeSheet,
     addButton,
     removeButton,
+    setZoneCount,
+    updateZone,
   }
 }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 /**
  * ButtonInlaySVG — renders a single Somrig button inlay as an SVG.
  *
@@ -25,6 +26,10 @@ export interface ZoneConfig {
   icon?: string
   /** Action type indicator shown at bottom of zone */
   indicator?: IndicatorType
+  /** Icon size in mm — overrides component-level ICON_SIZE */
+  iconSize?: number
+  /** Icon color — overrides component-level iconColor prop */
+  iconColor?: string
 }
 
 const props = withDefaults(defineProps<{
@@ -123,8 +128,8 @@ function computeHalfZones(count: ZoneCount, yStart: number, height: number): Zon
 const topH = DIVIDER_Y          // 0 → 36
 const botH = H - DIVIDER_Y      // 36 → 71.9
 
-const topZoneList = computeHalfZones(props.topZones, 0, topH)
-const botZoneList = computeHalfZones(props.botZones, DIVIDER_Y, botH)
+const topZoneList = computed(() => computeHalfZones(props.topZones, 0, topH))
+const botZoneList = computed(() => computeHalfZones(props.botZones, DIVIDER_Y, botH))
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -133,9 +138,9 @@ function indicatorCY(zone: Zone): number {
   return zone.y + zone.h - INDICATOR_MARGIN_BOTTOM
 }
 
-/** SVG transform to center a 24×24 MDI icon path at (cx, cy) scaled to ICON_SIZE mm */
-function iconTransform(cx: number, cy: number): string {
-  const s = ICON_SIZE / 24
+/** SVG transform to center a 24×24 MDI icon path at (cx, cy) scaled to given size (mm) */
+function iconTransform(cx: number, cy: number, sizeMm?: number): string {
+  const s = (sizeMm ?? ICON_SIZE) / 24
   const tx = cx - (24 * s) / 2
   const ty = cy - (24 * s) / 2
   return `translate(${tx},${ty}) scale(${s})`
@@ -148,8 +153,8 @@ function vertDividers(count: ZoneCount): number[] {
   return [W / 3, (W / 3) * 2]
 }
 
-const topDividers = vertDividers(props.topZones)
-const botDividers = vertDividers(props.botZones)
+const topDividers = computed(() => vertDividers(props.topZones))
+const botDividers = computed(() => vertDividers(props.botZones))
 </script>
 
 <template>
@@ -211,8 +216,8 @@ const botDividers = vertDividers(props.botZones)
         <!-- MDI Icon -->
         <g
           v-if="topZoneConfig[i]?.icon"
-          :transform="iconTransform(zone.cx, zone.cy)"
-          :fill="iconColor"
+          :transform="iconTransform(zone.cx, zone.cy, topZoneConfig[i].iconSize)"
+          :fill="topZoneConfig[i].iconColor ?? iconColor"
         >
           <path :d="topZoneConfig[i].icon" />
         </g>
@@ -260,8 +265,8 @@ const botDividers = vertDividers(props.botZones)
         <!-- MDI Icon -->
         <g
           v-if="botZoneConfig[i]?.icon"
-          :transform="iconTransform(zone.cx, zone.cy)"
-          :fill="iconColor"
+          :transform="iconTransform(zone.cx, zone.cy, botZoneConfig[i].iconSize)"
+          :fill="botZoneConfig[i].iconColor ?? iconColor"
         >
           <path :d="botZoneConfig[i].icon" />
         </g>
