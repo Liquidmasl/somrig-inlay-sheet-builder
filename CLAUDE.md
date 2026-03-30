@@ -14,7 +14,7 @@ When you learn something non-obvious about this project that future sessions wou
 
 - **Repo:** `somrig-inlay-sheet-builder`
 - **Linear project:** LQM (issue prefix `LQM-`)
-- **Deployment:** Vercel (`vercel.json` present, `outputDirectory: dist`, `buildCommand: npm run build`)
+- **Deployment:** Netlify (`netlify.toml` present, `publish: dist`, `buildCommand: npm run build`). Netlify site ID: `6285caf2-813a-4ad5-8ca8-4b486f32b147`. `vercel.json` kept for reference but Netlify is the active platform.
 - **Branch convention:** `<author>/<issue-id>-<slug>`, e.g. `cyrus/lqm-68-project-setup-vite-vue-3-tailwind-mdi`
 - **PR convention:** title must include Linear issue identifier, e.g. `LQM-68 Project setup: Vite + Vue 3 + Tailwind + MDI`
 
@@ -29,7 +29,7 @@ When you learn something non-obvious about this project that future sessions wou
 | Styling | Tailwind CSS v4 (via `@tailwindcss/vite` plugin — no `tailwind.config.js` needed) |
 | Icons | `@mdi/js` (Material Design Icons, path-based SVG) |
 | Language | TypeScript 5.9 (strict, project references) |
-| Deploy | Vercel |
+| Deploy | Netlify |
 
 See `.claude/stack.md` for setup details and gotchas.
 
@@ -76,6 +76,33 @@ npm run dev      # Vite dev server
 npm run build    # Type-check (vue-tsc) then Vite build → dist/
 npm run preview  # Preview production build
 ```
+
+---
+
+## Release Workflow
+
+Follows the same PR-based changelog pattern as LQM-64.
+
+**Feature branches** never touch `CHANGELOG.md` or `package.json` version. Add a `## Release Notes` section to PR bodies for user-facing changes.
+
+**To fire a release**, tell Cyrus: "release a patch/minor/major". Cyrus will run:
+
+```bash
+git checkout main && git pull
+./scripts/release.sh <patch|minor|major>
+```
+
+This creates a `release/vX.Y.Z` branch + PR with auto-generated changelog from merged PR bodies.
+
+**On merge of a release PR**, `.github/workflows/release.yml` automatically:
+1. Builds the app
+2. Creates a git tag
+3. Creates a GitHub Release with changelog notes
+4. Deploys to Netlify
+
+**Required GitHub secrets:**
+- `NETLIFY_AUTH_TOKEN` — Netlify personal access token
+- `NETLIFY_SITE_ID` — `6285caf2-813a-4ad5-8ca8-4b486f32b147`
 
 ---
 
