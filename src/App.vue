@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed, ref, nextTick, watch } from 'vue'
+import { onMounted, onUnmounted, computed, ref, nextTick, watch } from 'vue'
 import { mdiPlus, mdiChevronLeft, mdiChevronRight, mdiPrinter, mdiDownload } from '@mdi/js'
 import AppHeader from './components/AppHeader.vue'
 import ButtonInlaySVG, { type ZoneConfig } from './components/ButtonInlaySVG.vue'
@@ -12,12 +12,57 @@ const { init } = useDarkMode()
 onMounted(() => {
   init()
   scrollToActiveCard()
+  window.addEventListener('resize', updateWindowHeight)
+
+  // Set up ResizeObserver for editor panel
+  if (editorPanelRef.value) {
+    resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        editorPanelHeight.value = entry.contentRect.height
+      }
+    })
+    resizeObserver.observe(editorPanelRef.value)
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateWindowHeight)
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+  }
 })
 
 const { activeSheet, activeSheetId, activeButtonId, addButton } = useSheets()
 
 // Mobile navigation
 const carouselRef = ref<HTMLElement | null>(null)
+const editorPanelRef = ref<HTMLElement | null>(null)
+const windowHeight = ref(window.innerHeight)
+const editorPanelHeight = ref(420) // Default fallback
+
+// Update window height on resize
+function updateWindowHeight() {
+  windowHeight.value = window.innerHeight
+}
+
+// Set up ResizeObserver for editor panel
+let resizeObserver: ResizeObserver | null = null
+
+// Calculate responsive scale for mobile preview
+// Available height = viewport - (header + print buttons + editor panel + margins)
+const previewScale = computed(() => {
+  const headerHeight = 56 // Approximate header height
+  const printButtonsHeight = 56 // Print/Download buttons section
+  const marginsAndGaps = 45 // Various margins
+  const paginationDotsHeight = 8 // Height of pagination dots
+  const chromeHeight = headerHeight + printButtonsHeight + editorPanelHeight.value + marginsAndGaps + paginationDotsHeight
+  const availableHeight = windowHeight.value - chromeHeight
+
+  const buttonHeightMm = 71.9 // Physical button height in mm
+  const mmToPixels = 3.7795 // Conversion factor (96 DPI)
+  const maxScale = availableHeight / (buttonHeightMm * mmToPixels)
+  return Math.min(Math.max(maxScale, 0.5), 2) // Clamp between 0.5 and 2
+})
 
 const activeButtonIndex = computed(() => {
   if (!activeSheet.value || !activeButtonId.value) return 0
@@ -96,7 +141,7 @@ function handlePrint() {
     <AppHeader />
 
     <!-- Main content area -->
-    <main class="flex-1 overflow-auto pt-4 md:p-8 pb-[420px] md:pb-72">
+    <main class="flex-1 overflow-auto pt-4 md:pb-[420px] md:pb-72">
       <div class=" mx-auto">
         <!-- Print/Download buttons -->
         <div class="flex items-center justify-center gap-2 mb-3">
@@ -127,8 +172,8 @@ function handlePrint() {
         <!-- Mobile: Carousel with centered button and arrows -->
         <div class="md:hidden relative">
           <!-- Carousel container (full width, viewport clips edges) -->
-          <div ref="carouselRef" class="overflow-x-auto snap-x snap-mandatory scroll-smooth" style="scrollbar-width: none; -ms-overflow-style: none;">
-            <div class="flex gap-10 items-center justify-start" style="padding-left: calc(50vw - 41.2mm * 0.7 / 2 - 8px); padding-right: calc(50vw - 41.2mm * 0.7 / 2 - 8px);">
+          <div ref="carouselRef" class="pt-1 pb-1 overflow-x-auto snap-x snap-mandatory scroll-smooth" style="scrollbar-width: none; -ms-overflow-style: none;">
+            <div class="flex items-center justify-start" :style="`padding-left: calc(50vw - 41.2mm * ${previewScale} / 2 - 8px); padding-right: calc(50vw - 41.2mm * ${previewScale} / 2 - 8px); gap: calc((100vw - (1.5 * ((41.2mm * ${previewScale}) + 16px) ))/2)`">
               <!-- Button cards -->
               <button
                 v-for="btn in activeSheet?.buttons"
@@ -152,13 +197,14 @@ function handlePrint() {
                   :vertical-separator="btn.verticalSeparator"
                   :stroke-color="strokeColor"
                   :fill-color="fillColor"
-                  :scale="0.7"
+                  :scale="previewScale"
                 />
               </button>
 
               <!-- Add button card -->
               <button
-                class="button-card flex-shrink-0 h-[calc(71.9mm*0.7)] snap-center rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors bg-white/50 dark:bg-gray-900/50 flex items-center justify-center opacity-60 px-8"
+                class="button-card flex-shrink-0 snap-center rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors bg-white/50 dark:bg-gray-900/50 flex items-center justify-center opacity-60 px-8"
+                :style="{ width: `calc(41.2mm * ${previewScale} + 16px)`, height: `calc(71.9mm * ${previewScale} + 16px)` }"
                 title="Add button"
                 @click="handleAddButton"
               >
@@ -237,13 +283,14 @@ function handlePrint() {
               :vertical-separator="btn.verticalSeparator"
               :stroke-color="strokeColor"
               :fill-color="fillColor"
-              :scale="1.5"
+              :scale="previewScale"
             />
           </button>
 
           <!-- Add button -->
           <button
-            class="no-print flex items-center justify-center w-[calc(41.2mm*1.5)] h-[calc(71.9mm*1.5)] rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors bg-white/50 dark:bg-gray-900/50"
+            class="no-print flex items-center justify-center rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors bg-white/50 dark:bg-gray-900/50"
+            :style="{ width: `calc(41.2mm * ${previewScale} + 16px)`, height: `calc(71.9mm * ${previewScale} + 16px)` }"
             title="Add button"
             @click="handleAddButton"
           >
@@ -258,6 +305,7 @@ function handlePrint() {
     <!-- Floating editor panel - vertical on mobile, horizontal on desktop -->
     <div class="no-print fixed bottom-0 left-0 right-0 flex justify-center p-2 md:p-4 pointer-events-none">
       <aside
+        ref="editorPanelRef"
         class="pointer-events-auto w-full max-w-4xl bg-white/80 dark:bg-gray-900/80 rounded-t-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden max-h-[50vh] md:max-h-none overflow-y-auto"
         style="backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);"
       >

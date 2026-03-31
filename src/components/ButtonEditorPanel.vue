@@ -18,8 +18,8 @@ const { activeButton, setZoneCount, updateZone, setIndicatorPosition, updateSepa
 const activeTopZone = ref(0)
 const activeBotZone = ref(0)
 
-// Active tab for mobile (top, bottom, or background)
-const activeHalf = ref<'top' | 'bottom' | 'background'>('top')
+// Active tab for mobile (top, bottom, or separators)
+const activeHalf = ref<'top' | 'bottom' | 'separators'>('top')
 
 // Watch for button changes and reset zone indices if out of bounds
 watch(activeButton, (newButton) => {
@@ -36,8 +36,8 @@ watch(activeButton, (newButton) => {
   }
 })
 
-// Collapsible background section for horizontal layout
-const backgroundExpanded = ref(false)
+// Collapsible separators section for horizontal layout
+const separatorsExpanded = ref(false)
 
 // Icon picker state
 const pickerOpen = ref(false)
@@ -219,13 +219,13 @@ function onUpdateSeparator(
         <button
           class="flex-1 px-4 py-3 text-sm font-medium transition-colors"
           :class="
-            activeHalf === 'background'
+            activeHalf === 'separators'
               ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-white dark:bg-gray-800'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
           "
-          @click="activeHalf = 'background'"
+          @click="activeHalf = 'separators'"
         >
-          Background
+          Separators
         </button>
       </div>
 
@@ -280,7 +280,7 @@ function onUpdateSeparator(
               </div>
             </div>
             <div class="ml-auto">
-              <label class="block text-xs text-gray-500 mb-1">Indicator</label>
+              <label class="block text-xs text-gray-500 mb-1 text-right">Indicator</label>
               <div class="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <button
                   v-for="pos in INDICATOR_POSITIONS"
@@ -320,13 +320,30 @@ function onUpdateSeparator(
                     :aria-label="`Set zone ${activeTopZone + 1} type to ${actionTypeLabel(t)}`"
                     @click="onSetZoneType('top', activeTopZone, t)"
                   >
-                    {{ indicatorSymbol(t) }}
+                    <!-- {{ indicatorSymbol(t) }} -->
+                      <svg v-if="t === 'single'" viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor">
+                        <circle cx="12" cy="12" r="5" />
+                      </svg>
+                      <svg v-else-if="t === 'double'" viewBox="0 0 24 24" class="w-6 h-4" fill="currentColor">
+                        <circle :cx="12+10" cy="12" r="5" /> <circle :cx="12-10" cy="12" r="5" />
+                      </svg>
+                      <svg v-else-if="t === 'hold'" viewBox="0 0 24 24" class="w-6 h-4" fill="currentColor">
+                        <rect
+                          x="-3"
+                          y="7"
+                          width="30"
+                          height="10"
+                          rx="5"
+                          ry="5"
+                        />
+                      </svg>
+                      
                   </button>
                 </div>
                 <!-- Remove zone button (only for zones 2 and 3) -->
                 <button
                   v-if="activeTopZone > 0"
-                  class="px-2 py-1 rounded-md text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  class="px-2  rounded-md text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   title="Remove this zone"
                   @click="onRemoveZone('top', activeTopZone)"
                 >
@@ -364,17 +381,17 @@ function onUpdateSeparator(
               </div>
 
               <!-- Icon size and color (side-by-side) -->
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-3 justify-between">
                 <!-- Icon size (left half) -->
-                <div class="flex-1 min-w-0">
+                <div class="flex-2 min-w-0">
                   <div class="flex items-center justify-between mb-1">
                     <label class="text-xs text-gray-500">Size</label>
                     <span class="text-xs text-gray-500">{{ activeButton.top.zones[activeTopZone].iconSize }} mm</span>
                   </div>
                   <input
                     type="range"
-                    min="6"
-                    max="20"
+                    min="0"
+                    max="25"
                     step="0.5"
                     :value="activeButton.top.zones[activeTopZone].iconSize"
                     class="w-full accent-blue-600"
@@ -384,15 +401,15 @@ function onUpdateSeparator(
 
                 <!-- Icon color (right half) -->
                 <div class="flex-1 min-w-0">
-                  <label class="block text-xs text-gray-500 mb-1">Color</label>
-                  <div class="flex items-center gap-2">
+                  <label class="block text-xs text-gray-500 mb-1 text-right">Color</label>
+                  <div class="flex items-center gap-2 justify-end">
+                    <span class="text-xs text-gray-400 font-mono truncate">{{ activeButton.top.zones[activeTopZone].iconColor }}</span>
                     <input
                       type="color"
                       :value="activeButton.top.zones[activeTopZone].iconColor"
                       class="h-7 w-12 rounded cursor-pointer border border-gray-200 dark:border-gray-700 bg-transparent shrink-0"
                       @input="onUpdateZone('top', activeTopZone, 'iconColor', ($event.target as HTMLInputElement).value)"
                     />
-                    <span class="text-xs text-gray-400 font-mono truncate">{{ activeButton.top.zones[activeTopZone].iconColor }}</span>
                   </div>
                 </div>
               </div>
@@ -490,7 +507,7 @@ function onUpdateSeparator(
                 <!-- Remove zone button (only for zones 2 and 3) -->
                 <button
                   v-if="activeBotZone > 0"
-                  class="px-2 py-1 rounded-md text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  class="px-2 rounded-md text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   title="Remove this zone"
                   @click="onRemoveZone('bottom', activeBotZone)"
                 >
@@ -530,7 +547,7 @@ function onUpdateSeparator(
               <!-- Icon size and color (side-by-side) -->
               <div class="flex items-center gap-3">
                 <!-- Icon size (left half) -->
-                <div class="flex-1 min-w-0">
+                <div class="flex-2 min-w-0">
                   <div class="flex items-center justify-between mb-1">
                     <label class="text-xs text-gray-500">Size</label>
                     <span class="text-xs text-gray-500">{{ activeButton.bottom.zones[activeBotZone].iconSize }} mm</span>
@@ -548,40 +565,40 @@ function onUpdateSeparator(
 
                 <!-- Icon color (right half) -->
                 <div class="flex-1 min-w-0">
-                  <label class="block text-xs text-gray-500 mb-1">Color</label>
-                  <div class="flex items-center gap-2">
+                  <label class="block text-xs text-gray-500 mb-1 text-right">Color</label>
+                  <div class="flex items-center gap-2 justify-end">
+                    <span class="text-xs text-gray-400 font-mono truncate">{{ activeButton.bottom.zones[activeBotZone].iconColor }}</span>
                     <input
                       type="color"
                       :value="activeButton.bottom.zones[activeBotZone].iconColor"
                       class="h-7 w-12 rounded cursor-pointer border border-gray-200 dark:border-gray-700 bg-transparent shrink-0"
                       @input="onUpdateZone('bottom', activeBotZone, 'iconColor', ($event.target as HTMLInputElement).value)"
                     />
-                    <span class="text-xs text-gray-400 font-mono truncate">{{ activeButton.bottom.zones[activeBotZone].iconColor }}</span>
                   </div>
                 </div>
               </div>
           </div>
         </section>
 
-        <!-- Background section -->
+        <!-- separators section -->
         <section
-          v-if="layout === 'horizontal' || activeHalf === 'background'"
+          v-if="layout === 'horizontal' || activeHalf === 'separators'"
           :class="layout === 'horizontal' ? 'col-span-2 border-t border-gray-200 dark:border-gray-700 pt-4' : ''"
         >
           <button
             v-if="layout === 'horizontal'"
             class="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3 hover:text-gray-700 dark:hover:text-gray-300"
-            @click="backgroundExpanded = !backgroundExpanded"
+            @click="separatorsExpanded = !separatorsExpanded"
           >
             <svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor">
-              <path :d="backgroundExpanded ? mdiChevronUp : mdiChevronDown" />
+              <path :d="separatorsExpanded ? mdiChevronUp : mdiChevronDown" />
             </svg>
-            Background
+            separators
           </button>
 
-          <!-- Background controls (collapsible in horizontal mode) -->
+          <!-- separators controls (collapsible in horizontal mode) -->
           <div
-            v-show="layout !== 'horizontal' || backgroundExpanded"
+            v-show="layout !== 'horizontal' || separatorsExpanded"
             :class="layout === 'horizontal' ? 'grid grid-cols-2 gap-4' : ''"
           >
           <!-- Horizontal separator -->
@@ -596,30 +613,18 @@ function onUpdateSeparator(
               </div>
               <input
                 type="range"
-                min="0.1"
-                max="1.5"
+                min="0"
+                max="4.0"
                 step="0.1"
                 :value="activeButton.horizontalSeparator.thickness"
                 class="w-full accent-blue-600"
                 @input="onUpdateSeparator('horizontal', 'thickness', parseFloat(($event.target as HTMLInputElement).value))"
               />
             </div>
-
-            <!-- Color -->
-            <div class="flex items-center gap-2">
-              <label class="text-xs text-gray-500 w-14 shrink-0">Color</label>
-              <input
-                type="color"
-                :value="activeButton.horizontalSeparator.color"
-                class="h-7 w-12 rounded cursor-pointer border border-gray-200 dark:border-gray-700 bg-transparent"
-                @input="onUpdateSeparator('horizontal', 'color', ($event.target as HTMLInputElement).value)"
-              />
-              <span class="text-xs text-gray-400 font-mono">{{ activeButton.horizontalSeparator.color }}</span>
-            </div>
+                         <div class="flex items-center gap-3 justify-between">
 
             <!-- Line style -->
             <div class="flex items-center gap-2">
-              <label class="text-xs text-gray-500 w-14 shrink-0">Style</label>
               <div class="inline-flex rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <button
                   v-for="style in LINE_STYLES"
@@ -636,6 +641,20 @@ function onUpdateSeparator(
                 </button>
               </div>
             </div>
+            <!-- Color -->
+            <div class="flex items-center gap-2">
+              <input
+                type="color"
+                :value="activeButton.horizontalSeparator.color"
+                class="h-7 w-12 rounded cursor-pointer border border-gray-200 dark:border-gray-700 bg-transparent"
+                @input="onUpdateSeparator('horizontal', 'color', ($event.target as HTMLInputElement).value)"
+              />
+              <span class="text-xs text-gray-400 font-mono">{{ activeButton.horizontalSeparator.color }}</span>
+
+            </div>
+
+
+            </div>
           </div>
 
           <!-- Vertical separator -->
@@ -650,30 +669,18 @@ function onUpdateSeparator(
               </div>
               <input
                 type="range"
-                min="0.1"
-                max="1.5"
+                min="0"
+                max="4.0"
                 step="0.1"
                 :value="activeButton.verticalSeparator.thickness"
                 class="w-full accent-blue-600"
                 @input="onUpdateSeparator('vertical', 'thickness', parseFloat(($event.target as HTMLInputElement).value))"
               />
             </div>
-
-            <!-- Color -->
-            <div class="flex items-center gap-2">
-              <label class="text-xs text-gray-500 w-14 shrink-0">Color</label>
-              <input
-                type="color"
-                :value="activeButton.verticalSeparator.color"
-                class="h-7 w-12 rounded cursor-pointer border border-gray-200 dark:border-gray-700 bg-transparent"
-                @input="onUpdateSeparator('vertical', 'color', ($event.target as HTMLInputElement).value)"
-              />
-              <span class="text-xs text-gray-400 font-mono">{{ activeButton.verticalSeparator.color }}</span>
-            </div>
+             <div class="flex items-center gap-3 justify-between">
 
             <!-- Line style -->
             <div class="flex items-center gap-2">
-              <label class="text-xs text-gray-500 w-14 shrink-0">Style</label>
               <div class="inline-flex rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <button
                   v-for="style in LINE_STYLES"
@@ -690,6 +697,20 @@ function onUpdateSeparator(
                 </button>
               </div>
             </div>
+
+            <!-- Color -->
+            <div class="flex items-center gap-2">
+              <input
+                type="color"
+                :value="activeButton.verticalSeparator.color"
+                class="h-7 w-12 rounded cursor-pointer border border-gray-200 dark:border-gray-700 bg-transparent"
+                @input="onUpdateSeparator('vertical', 'color', ($event.target as HTMLInputElement).value)"
+              />
+              <span class="text-xs text-gray-400 font-mono">{{ activeButton.verticalSeparator.color }}</span>
+            </div>
+
+
+             </div>
           </div>
           </div>
         </section>
