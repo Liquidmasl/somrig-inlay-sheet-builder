@@ -1,9 +1,17 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed, ref, nextTick, watch } from 'vue'
-import { mdiPlus, mdiChevronLeft, mdiChevronRight, mdiPrinter, mdiDownload } from '@mdi/js'
+import {
+  mdiChevronLeft,
+  mdiChevronRight,
+  mdiDownload,
+  mdiPlus,
+  mdiPrinter,
+} from '@mdi/js'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import AppHeader from './components/AppHeader.vue'
-import ButtonInlaySVG, { type ZoneConfig } from './components/ButtonInlaySVG.vue'
 import ButtonEditorPanel from './components/ButtonEditorPanel.vue'
+import ButtonInlaySVG, {
+  type ZoneConfig,
+} from './components/ButtonInlaySVG.vue'
 import { useDarkMode } from './composables/useDarkMode'
 import { useSheets } from './composables/useSheets'
 import type { ActionType, ActionZone } from './types'
@@ -55,7 +63,12 @@ const previewScale = computed(() => {
   const printButtonsHeight = 56 // Print/Download buttons section
   const marginsAndGaps = 45 // Various margins
   const paginationDotsHeight = 8 // Height of pagination dots
-  const chromeHeight = headerHeight + printButtonsHeight + editorPanelHeight.value + marginsAndGaps + paginationDotsHeight
+  const chromeHeight =
+    headerHeight +
+    printButtonsHeight +
+    editorPanelHeight.value +
+    marginsAndGaps +
+    paginationDotsHeight
   const availableHeight = windowHeight.value - chromeHeight
 
   const buttonHeightMm = 71.9 // Physical button height in mm
@@ -66,7 +79,9 @@ const previewScale = computed(() => {
 
 const activeButtonIndex = computed(() => {
   if (!activeSheet.value || !activeButtonId.value) return 0
-  return activeSheet.value.buttons.findIndex(b => b.id === activeButtonId.value)
+  return activeSheet.value.buttons.findIndex(
+    (b) => b.id === activeButtonId.value,
+  )
 })
 
 const canGoPrev = computed(() => activeButtonIndex.value > 0)
@@ -81,20 +96,26 @@ function scrollToActiveCard() {
     const cards = carouselRef.value.querySelectorAll('.button-card')
     const activeCard = cards[activeButtonIndex.value]
     if (activeCard) {
-      activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+      activeCard.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      })
     }
   })
 }
 
 function goToPrevButton() {
   if (!canGoPrev.value || !activeSheet.value) return
-  activeButtonId.value = activeSheet.value.buttons[activeButtonIndex.value - 1].id
+  activeButtonId.value =
+    activeSheet.value.buttons[activeButtonIndex.value - 1].id
   scrollToActiveCard()
 }
 
 function goToNextButton() {
   if (!canGoNext.value || !activeSheet.value) return
-  activeButtonId.value = activeSheet.value.buttons[activeButtonIndex.value + 1].id
+  activeButtonId.value =
+    activeSheet.value.buttons[activeButtonIndex.value + 1].id
   scrollToActiveCard()
 }
 
@@ -107,14 +128,17 @@ watch(activeButtonId, () => {
 const strokeColor = '#000000'
 const fillColor = '#ffffff'
 
-function actionTypeToIndicator(type: ActionType): 'dot' | 'double-dot' | 'dash' {
+function actionTypeToIndicator(
+  type: ActionType,
+): 'dot' | 'double-dot' | 'dash' {
   if (type === 'single') return 'dot'
   if (type === 'double') return 'double-dot'
-  return 'dash'
+  if (type === 'hold') return 'dash'
+  return 'none'
 }
 
 function toZoneConfigs(zones: ActionZone[]): ZoneConfig[] {
-  return zones.map(z => ({
+  return zones.map((z) => ({
     icon: z.icon ?? undefined,
     indicator: actionTypeToIndicator(z.type),
     iconSize: z.iconSize,
