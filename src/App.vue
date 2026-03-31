@@ -119,6 +119,7 @@ function toZoneConfigs(zones: ActionZone[]): ZoneConfig[] {
     indicator: actionTypeToIndicator(z.type),
     iconSize: z.iconSize,
     iconColor: z.iconColor,
+    iconRotation: z.iconRotation,
   }))
 }
 

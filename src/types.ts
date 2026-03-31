@@ -13,6 +13,7 @@ export interface ActionZone {
   icon: string | null    // MDI icon path name (e.g., 'mdiLightbulb')
   iconSize: number       // px, default ~20
   iconColor: string      // hex color, default '#000000'
+  iconRotation: number   // degrees, default 0
 }
 
 export interface PhysicalButton {
