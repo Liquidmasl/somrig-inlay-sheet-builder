@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
-import { mdiMagnify, mdiClose } from '@mdi/js'
+import { mdiClose, mdiMagnify } from '@mdi/js'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import type { IconOption } from '../data/mdiIcons'
 
 const props = defineProps<{
@@ -45,15 +45,15 @@ watch(searchInput, (val) => {
 const filteredIcons = computed(() => {
   const q = search.value.trim().toLowerCase()
   if (!q) return allIcons.value
-  return allIcons.value.filter(i => i.name.toLowerCase().includes(q))
+  return allIcons.value.filter((i) => i.name.toLowerCase().includes(q))
 })
 
 // --- Virtual scrolling ---
 const COLS = 6
-const ITEM_HEIGHT = 72   // px — fixed height for each icon button
-const ROW_GAP = 4        // gap-1 = 4px
-const ROW_HEIGHT = ITEM_HEIGHT + ROW_GAP  // 76px per row slot
-const OVERSCAN = 4       // extra rows to render above/below viewport
+const ITEM_HEIGHT = 72 // px — fixed height for each icon button
+const ROW_GAP = 4 // gap-1 = 4px
+const ROW_HEIGHT = ITEM_HEIGHT + ROW_GAP // 76px per row slot
+const OVERSCAN = 4 // extra rows to render above/below viewport
 
 const gridScrollRef = ref<HTMLElement | null>(null)
 const scrollTop = ref(0)
@@ -68,35 +68,41 @@ const totalRows = computed(() => Math.ceil(filteredIcons.value.length / COLS))
 const totalHeight = computed(() => totalRows.value * ROW_HEIGHT)
 
 const startRow = computed(() =>
-  Math.max(0, Math.floor(scrollTop.value / ROW_HEIGHT) - OVERSCAN)
+  Math.max(0, Math.floor(scrollTop.value / ROW_HEIGHT) - OVERSCAN),
 )
 const endRow = computed(() =>
-  Math.min(totalRows.value, Math.ceil((scrollTop.value + containerH.value) / ROW_HEIGHT) + OVERSCAN)
+  Math.min(
+    totalRows.value,
+    Math.ceil((scrollTop.value + containerH.value) / ROW_HEIGHT) + OVERSCAN,
+  ),
 )
 
 const visibleIcons = computed(() =>
-  filteredIcons.value.slice(startRow.value * COLS, endRow.value * COLS)
+  filteredIcons.value.slice(startRow.value * COLS, endRow.value * COLS),
 )
 
 const gridOffsetTop = computed(() => startRow.value * ROW_HEIGHT)
 
 // --- Modal lifecycle ---
-watch(() => props.open, async (isOpen) => {
-  if (isOpen) {
-    await loadIcons()
-    await nextTick()
-    if (gridScrollRef.value) {
-      containerH.value = gridScrollRef.value.clientHeight
-      ro = new ResizeObserver(() => {
-        containerH.value = gridScrollRef.value?.clientHeight ?? 380
-      })
-      ro.observe(gridScrollRef.value)
+watch(
+  () => props.open,
+  async (isOpen) => {
+    if (isOpen) {
+      await loadIcons()
+      await nextTick()
+      if (gridScrollRef.value) {
+        containerH.value = gridScrollRef.value.clientHeight
+        ro = new ResizeObserver(() => {
+          containerH.value = gridScrollRef.value?.clientHeight ?? 380
+        })
+        ro.observe(gridScrollRef.value)
+      }
+    } else {
+      ro?.disconnect()
+      ro = null
     }
-  } else {
-    ro?.disconnect()
-    ro = null
-  }
-})
+  },
+)
 
 onUnmounted(() => {
   ro?.disconnect()

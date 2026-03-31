@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
 test.describe('Button Editor Panel', () => {
   test.beforeEach(async ({ page }) => {
@@ -19,7 +19,9 @@ test.describe('Button Editor Panel', () => {
     await expect(page.locator('aside').getByText('Zones').first()).toBeVisible()
   })
 
-  test('changing top zone count updates the canvas button', async ({ page }) => {
+  test('changing top zone count updates the canvas button', async ({
+    page,
+  }) => {
     const selectedBtn = page.locator('main button[aria-label]').first()
     const svgBefore = await selectedBtn.locator('svg').first().innerHTML()
 
@@ -35,7 +37,9 @@ test.describe('Button Editor Panel', () => {
     expect(svgAfter).not.toBe(svgBefore)
   })
 
-  test('changing bottom zone count updates the canvas button', async ({ page }) => {
+  test('changing bottom zone count updates the canvas button', async ({
+    page,
+  }) => {
     const selectedBtn = page.locator('main button[aria-label]').first()
     const svgBefore = await selectedBtn.locator('svg').first().innerHTML()
 
@@ -77,7 +81,9 @@ test.describe('Button Editor Panel', () => {
     await expect(page.getByText('Pick Icon')).not.toBeVisible()
   })
 
-  test('icon picker modal can be closed via backdrop click', async ({ page }) => {
+  test('icon picker modal can be closed via backdrop click', async ({
+    page,
+  }) => {
     const aside = page.locator('aside')
     await aside.getByText('No icon — click to add').first().click()
     await expect(page.getByText('Pick Icon')).toBeVisible()
@@ -127,7 +133,9 @@ test.describe('Button Editor Panel', () => {
     await expect(page.locator('.fixed .grid button')).toHaveCount(1)
   })
 
-  test('adding a new button and selecting it shows editor', async ({ page }) => {
+  test('adding a new button and selecting it shows editor', async ({
+    page,
+  }) => {
     // Click the "+" add button in the canvas
     await page.locator('main button[title="Add button"]').click()
 
@@ -161,17 +169,23 @@ test.describe('Button Editor Panel', () => {
   test('zone type selector is visible for each zone', async ({ page }) => {
     const aside = page.locator('aside')
     // Each zone card should have type toggle buttons (● ●● ▬)
-    await expect(aside.locator('button[aria-label*="Set zone"]').first()).toBeVisible()
+    await expect(
+      aside.locator('button[aria-label*="Set zone"]').first(),
+    ).toBeVisible()
   })
 
-  test('zone type selector changes the zone type indicator in canvas', async ({ page }) => {
+  test('zone type selector changes the zone type indicator in canvas', async ({
+    page,
+  }) => {
     const selectedBtn = page.locator('main button[aria-label]').first()
     const svgBefore = await selectedBtn.locator('svg').first().innerHTML()
 
     // Click the "●●" (double) type button for zone 1 in top half
     const aside = page.locator('aside')
     const topSection = aside.locator('section').first()
-    await topSection.locator('button[aria-label="Set zone 1 type to Double"]').click()
+    await topSection
+      .locator('button[aria-label="Set zone 1 type to Double"]')
+      .click()
     await page.waitForTimeout(100)
 
     // Canvas SVG should have changed (indicator changed from dot to double-dot)
@@ -188,11 +202,15 @@ test.describe('Button Editor Panel', () => {
     await page.waitForTimeout(100)
 
     // Now change zone 1 type to Hold (▬)
-    await topSection.locator('button[aria-label="Set zone 1 type to Hold"]').click()
+    await topSection
+      .locator('button[aria-label="Set zone 1 type to Hold"]')
+      .click()
     await page.waitForTimeout(100)
 
     // The type button for Hold should be active (blue)
-    const holdBtn = topSection.locator('button[aria-label="Set zone 1 type to Hold"]')
+    const holdBtn = topSection.locator(
+      'button[aria-label="Set zone 1 type to Hold"]',
+    )
     await expect(holdBtn).toHaveClass(/bg-blue-600/)
   })
 })

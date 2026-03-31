@@ -1,18 +1,37 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { mdiImageOffOutline, mdiChevronDown, mdiChevronUp, mdiPlus } from '@mdi/js'
+import {
+  mdiChevronDown,
+  mdiChevronUp,
+  mdiImageOffOutline,
+  mdiPlus,
+} from '@mdi/js'
+import { computed, ref, watch } from 'vue'
 import { useSheets } from '../composables/useSheets'
+import type {
+  ActionType,
+  IndicatorPosition,
+  LineStyle,
+  SeparatorStyle,
+} from '../types'
 import IconPickerModal from './IconPickerModal.vue'
-import type { ActionType, IndicatorPosition, LineStyle, SeparatorStyle } from '../types'
 
-const props = withDefaults(defineProps<{
-  /** Layout mode: 'vertical' (sidebar) or 'horizontal' (floating bottom panel) */
-  layout?: 'vertical' | 'horizontal'
-}>(), {
-  layout: 'vertical',
-})
+const props = withDefaults(
+  defineProps<{
+    /** Layout mode: 'vertical' (sidebar) or 'horizontal' (floating bottom panel) */
+    layout?: 'vertical' | 'horizontal'
+  }>(),
+  {
+    layout: 'vertical',
+  },
+)
 
-const { activeButton, setZoneCount, updateZone, setIndicatorPosition, updateSeparator } = useSheets()
+const {
+  activeButton,
+  setZoneCount,
+  updateZone,
+  setIndicatorPosition,
+  updateSeparator,
+} = useSheets()
 
 // Active zone for pagination (0-indexed: 0, 1, or 2)
 const activeTopZone = ref(0)
@@ -41,7 +60,9 @@ const separatorsExpanded = ref(false)
 
 // Icon picker state
 const pickerOpen = ref(false)
-const pickerTarget = ref<{ half: 'top' | 'bottom'; zoneIndex: number } | null>(null)
+const pickerTarget = ref<{ half: 'top' | 'bottom'; zoneIndex: number } | null>(
+  null,
+)
 
 const currentPickerIcon = computed(() => {
   if (!activeButton.value || !pickerTarget.value) return null
@@ -56,9 +77,14 @@ function openIconPicker(half: 'top' | 'bottom', zoneIndex: number) {
 
 function handleIconSelect(path: string) {
   if (!activeButton.value || !pickerTarget.value) return
-  updateZone(activeButton.value.id, pickerTarget.value.half, pickerTarget.value.zoneIndex, {
-    icon: path,
-  })
+  updateZone(
+    activeButton.value.id,
+    pickerTarget.value.half,
+    pickerTarget.value.zoneIndex,
+    {
+      icon: path,
+    },
+  )
 }
 
 function clearIcon(half: 'top' | 'bottom', zoneIndex: number) {
@@ -69,14 +95,18 @@ function clearIcon(half: 'top' | 'bottom', zoneIndex: number) {
 function actionTypeLabel(type: ActionType): string {
   if (type === 'single') return 'Single'
   if (type === 'double') return 'Double'
-  return 'Hold'
+  if (type === 'hold') return 'Hold'
+  return 'None'
 }
 
+const topZoneCount = computed(
+  () => (activeButton.value?.top.zones.length ?? 1) as 1 | 2 | 3,
+)
+const botZoneCount = computed(
+  () => (activeButton.value?.bottom.zones.length ?? 1) as 1 | 2 | 3,
+)
 
-const topZoneCount = computed(() => (activeButton.value?.top.zones.length ?? 1) as 1 | 2 | 3)
-const botZoneCount = computed(() => (activeButton.value?.bottom.zones.length ?? 1) as 1 | 2 | 3)
-
-const ACTION_TYPES: ActionType[] = ['single', 'hold', 'double']
+const ACTION_TYPES: ActionType[] = ['single', 'double', 'hold', 'none']
 
 function onSelectZone(half: 'top' | 'bottom', zoneIndex: number) {
   // Just switch to the selected zone, don't change zone count
@@ -107,7 +137,8 @@ function onRemoveZone(half: 'top' | 'bottom', zoneIndex: number) {
   if (!activeButton.value || zoneIndex === 0) return // Can't remove zone 1
 
   // Get the zones array and splice out the specific zone
-  const phys = half === 'top' ? activeButton.value.top : activeButton.value.bottom
+  const phys =
+    half === 'top' ? activeButton.value.top : activeButton.value.bottom
   phys.zones.splice(zoneIndex, 1)
 
   // Update the zone count to match the new length
@@ -133,12 +164,19 @@ function onUpdateZone(
   updateZone(activeButton.value.id, half, zoneIndex, { [field]: value })
 }
 
-function onSetZoneType(half: 'top' | 'bottom', zoneIndex: number, type: ActionType) {
+function onSetZoneType(
+  half: 'top' | 'bottom',
+  zoneIndex: number,
+  type: ActionType,
+) {
   if (!activeButton.value) return
   updateZone(activeButton.value.id, half, zoneIndex, { type })
 }
 
-function onSetIndicatorPosition(half: 'top' | 'bottom', position: IndicatorPosition) {
+function onSetIndicatorPosition(
+  half: 'top' | 'bottom',
+  position: IndicatorPosition,
+) {
   if (!activeButton.value) return
   setIndicatorPosition(activeButton.value.id, half, position)
 }
@@ -331,7 +369,7 @@ function onUpdateSeparator(
                           ry="5"
                         />
                       </svg>
-                      
+                      <span v-else-if="t === 'none'" class="text-xs">none</span>
                   </button>
                 </div>
                 <!-- Remove zone button (only for zones 2 and 3) -->
@@ -526,6 +564,7 @@ function onUpdateSeparator(
                           ry="5"
                         />
                       </svg>
+                      <span v-else-if="t === 'none'" class="text-xs">none</span>
                   </button>
                 </div>
                 <!-- Remove zone button (only for zones 2 and 3) -->

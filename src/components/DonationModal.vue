@@ -4,7 +4,8 @@ import { mdiClose, mdiHeart } from '@mdi/js'
 defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 
-const PAYPAL_DONATE_URL = 'https://www.paypal.com/donate/?hosted_button_id=PESLSWZB9S2UG'
+const PAYPAL_DONATE_URL =
+  'https://www.paypal.com/donate/?hosted_button_id=PESLSWZB9S2UG'
 </script>
 
 <template>
