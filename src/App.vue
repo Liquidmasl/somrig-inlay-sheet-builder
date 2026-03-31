@@ -10,6 +10,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import AppHeader from './components/AppHeader.vue'
 import ButtonEditorPanel from './components/ButtonEditorPanel.vue'
 import ButtonInlaySVG, {
+  type IndicatorType,
   type ZoneConfig,
 } from './components/ButtonInlaySVG.vue'
 import { useDarkMode } from './composables/useDarkMode'
@@ -128,9 +129,7 @@ watch(activeButtonId, () => {
 const strokeColor = '#000000'
 const fillColor = '#ffffff'
 
-function actionTypeToIndicator(
-  type: ActionType,
-): 'dot' | 'double-dot' | 'dash' {
+function actionTypeToIndicator(type: ActionType): IndicatorType {
   if (type === 'single') return 'dot'
   if (type === 'double') return 'double-dot'
   if (type === 'hold') return 'dash'
