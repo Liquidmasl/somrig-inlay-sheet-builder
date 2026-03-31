@@ -9,6 +9,7 @@ function createDefaultZone(type: ActionType = 'single'): ActionZone {
     icon: null,
     iconSize: 12,
     iconColor: '#000000',
+    iconRotation: 0,
   }
 }
 
