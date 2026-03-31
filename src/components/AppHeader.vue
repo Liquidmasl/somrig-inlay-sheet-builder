@@ -10,9 +10,12 @@ const showDonation = ref(false)
 
 <template>
   <header class="no-print flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-    <h1 class="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
-      Somrig Sheets
-    </h1>
+    <div class="flex items-center gap-2">
+      <img src="/lambda_icon.png" alt="Somrig logo" class="h-7 w-auto" />
+      <h1 class="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
+        Somrig Sheets
+      </h1>
+    </div>
     <div class="flex items-center gap-1 md:gap-2">
       <!-- Donation button -->
       <button
