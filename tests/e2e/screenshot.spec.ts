@@ -8,8 +8,8 @@
  * Screenshots are committed to the repo and referenced in PR bodies.
  */
 
+import path from 'node:path'
 import { test } from '@playwright/test'
-import path from 'path'
 
 const SCREENSHOTS_DIR = path.resolve('tests/e2e/screenshots')
 
@@ -63,7 +63,12 @@ test.describe('Screenshots', () => {
 
     // Set top to 3 zones
     const aside = page.locator('aside')
-    await aside.locator('section').first().locator('button').filter({ hasText: '3' }).click()
+    await aside
+      .locator('section')
+      .first()
+      .locator('button')
+      .filter({ hasText: '3' })
+      .click()
 
     await page.waitForTimeout(100)
     await page.screenshot({

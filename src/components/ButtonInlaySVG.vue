@@ -31,7 +31,7 @@ export interface ZoneConfig {
   /** Icon color — overrides component-level iconColor prop */
   iconColor?: string
 
-  iconRotation?: number  // degrees clockwise, default 0, applied after scaling
+  iconRotation?: number // degrees clockwise, default 0, applied after scaling
 }
 
 export interface SeparatorStyleProp {
@@ -40,48 +40,62 @@ export interface SeparatorStyleProp {
   style?: 'solid' | 'dashed' | 'dotted'
 }
 
-const props = withDefaults(defineProps<{
-  /** Number of zones in the top half: 1 = full, 2 = split, 3 = thirds */
-  topZones?: ZoneCount
-  /** Number of zones in the bottom half: 1 = full, 2 = split, 3 = thirds */
-  botZones?: ZoneCount
-  /** Per-zone config for top half (index 0 = first zone from left) */
-  topZoneConfig?: ZoneConfig[]
-  /** Per-zone config for bottom half (index 0 = first zone from left) */
-  botZoneConfig?: ZoneConfig[]
-  /** Indicator position for top half: 'inner' = near divider, 'outer' = near edge */
-  topIndicatorPos?: 'inner' | 'outer'
-  /** Indicator position for bottom half: 'inner' = near divider, 'outer' = near edge */
-  botIndicatorPos?: 'inner' | 'outer'
-  /** Horizontal separator style (divider between top and bottom) */
-  horizontalSeparator?: SeparatorStyleProp
-  /** Vertical separator style (zone dividers) */
-  verticalSeparator?: SeparatorStyleProp
-  /** Stroke color for outlines/dividers */
-  strokeColor?: string
-  /** Fill color for the inlay background */
-  fillColor?: string
-  /** Icon fill color */
-  iconColor?: string
-  /** Scale factor applied to the viewBox (1 = 1px per mm) */
-  scale?: number
-}>(), {
-  topZones: 1,
-  botZones: 1,
-  topZoneConfig: () => [],
-  botZoneConfig: () => [],
-  topIndicatorPos: 'inner',
-  botIndicatorPos: 'inner',
-  horizontalSeparator: () => ({ thickness: 0.3, color: '#000000', style: 'solid' as const }),
-  verticalSeparator: () => ({ thickness: 0.3, color: '#000000', style: 'solid' as const }),
-  strokeColor: '#000000',
-  fillColor: '#ffffff',
-  iconColor: '#000000',
-  scale: 1,
-})
+const props = withDefaults(
+  defineProps<{
+    /** Number of zones in the top half: 1 = full, 2 = split, 3 = thirds */
+    topZones?: ZoneCount
+    /** Number of zones in the bottom half: 1 = full, 2 = split, 3 = thirds */
+    botZones?: ZoneCount
+    /** Per-zone config for top half (index 0 = first zone from left) */
+    topZoneConfig?: ZoneConfig[]
+    /** Per-zone config for bottom half (index 0 = first zone from left) */
+    botZoneConfig?: ZoneConfig[]
+    /** Indicator position for top half: 'inner' = near divider, 'outer' = near edge */
+    topIndicatorPos?: 'inner' | 'outer'
+    /** Indicator position for bottom half: 'inner' = near divider, 'outer' = near edge */
+    botIndicatorPos?: 'inner' | 'outer'
+    /** Horizontal separator style (divider between top and bottom) */
+    horizontalSeparator?: SeparatorStyleProp
+    /** Vertical separator style (zone dividers) */
+    verticalSeparator?: SeparatorStyleProp
+    /** Stroke color for outlines/dividers */
+    strokeColor?: string
+    /** Fill color for the inlay background */
+    fillColor?: string
+    /** Icon fill color */
+    iconColor?: string
+    /** Scale factor applied to the viewBox (1 = 1px per mm) */
+    scale?: number
+  }>(),
+  {
+    topZones: 1,
+    botZones: 1,
+    topZoneConfig: () => [],
+    botZoneConfig: () => [],
+    topIndicatorPos: 'inner',
+    botIndicatorPos: 'inner',
+    horizontalSeparator: () => ({
+      thickness: 0.3,
+      color: '#000000',
+      style: 'solid' as const,
+    }),
+    verticalSeparator: () => ({
+      thickness: 0.3,
+      color: '#000000',
+      style: 'solid' as const,
+    }),
+    strokeColor: '#000000',
+    fillColor: '#ffffff',
+    iconColor: '#000000',
+    scale: 1,
+  },
+)
 
 /** Convert line style to stroke-dasharray value */
-function getDashArray(style: 'solid' | 'dashed' | 'dotted' | undefined, thickness: number): string | undefined {
+function getDashArray(
+  style: 'solid' | 'dashed' | 'dotted' | undefined,
+  thickness: number,
+): string | undefined {
   if (!style || style === 'solid') return undefined
   if (style === 'dashed') return `${thickness * 4} ${thickness * 2}`
   if (style === 'dotted') return `${thickness} ${thickness * 2}`
@@ -95,14 +109,14 @@ const DIVIDER_Y = 36.0
 const CENTER_X = 20.2
 
 // Indicator dimensions (mm)
-const DOT_R = 0.75          // radius = diameter/2
+const DOT_R = 0.75 // radius = diameter/2
 const DASH_W = 4.5
 const DASH_H = 1.5
-const DASH_R = DASH_H / 2   // fully rounded ends
-const INDICATOR_MARGIN_BOTTOM = 3.5  // mm from bottom of zone to indicator center
+const DASH_R = DASH_H / 2 // fully rounded ends
+const INDICATOR_MARGIN_BOTTOM = 3.5 // mm from bottom of zone to indicator center
 
 // Icon size (mm) inscribed in each zone — slightly smaller than zone width
-const ICON_SIZE = 12  // mm — MDI icons are 24×24 user units, scaled to this
+const ICON_SIZE = 12 // mm — MDI icons are 24×24 user units, scaled to this
 
 // Exact outline path extracted from template PDF (mm units, origin 0,0)
 const OUTLINE_PATH =
@@ -121,29 +135,49 @@ const clipId = `inlay-clip-${uid}`
 
 // ── Zone geometry ─────────────────────────────────────────────────────────────
 interface Zone {
-  x: number   // left edge (mm)
-  y: number   // top edge (mm)
-  w: number   // width (mm)
-  h: number   // height (mm)
-  cx: number  // center x
-  cy: number  // center y
+  x: number // left edge (mm)
+  y: number // top edge (mm)
+  w: number // width (mm)
+  h: number // height (mm)
+  cx: number // center x
+  cy: number // center y
 }
 
-function computeHalfZones(count: ZoneCount, yStart: number, height: number): Zone[] {
+function computeHalfZones(
+  count: ZoneCount,
+  yStart: number,
+  height: number,
+): Zone[] {
   if (count === 1) {
-    return [{ x: 0, y: yStart, w: W, h: height, cx: W / 2, cy: yStart + height / 2 }]
+    return [
+      { x: 0, y: yStart, w: W, h: height, cx: W / 2, cy: yStart + height / 2 },
+    ]
   }
   if (count === 2) {
     const lw = CENTER_X
     const rw = W - CENTER_X
     return [
-      { x: 0,  y: yStart, w: lw, h: height, cx: lw / 2,      cy: yStart + height / 2 },
-      { x: lw, y: yStart, w: rw, h: height, cx: lw + rw / 2, cy: yStart + height / 2 },
+      {
+        x: 0,
+        y: yStart,
+        w: lw,
+        h: height,
+        cx: lw / 2,
+        cy: yStart + height / 2,
+      },
+      {
+        x: lw,
+        y: yStart,
+        w: rw,
+        h: height,
+        cx: lw + rw / 2,
+        cy: yStart + height / 2,
+      },
     ]
   }
   // 3 zones — split into thirds
   const zw = W / 3
-  return [0, 1, 2].map(col => ({
+  return [0, 1, 2].map((col) => ({
     x: col * zw,
     y: yStart,
     w: zw,
@@ -153,11 +187,13 @@ function computeHalfZones(count: ZoneCount, yStart: number, height: number): Zon
   }))
 }
 
-const topH = DIVIDER_Y          // 0 → 36
-const botH = H - DIVIDER_Y      // 36 → 71.9
+const topH = DIVIDER_Y // 0 → 36
+const botH = H - DIVIDER_Y // 36 → 71.9
 
 const topZoneList = computed(() => computeHalfZones(props.topZones, 0, topH))
-const botZoneList = computed(() => computeHalfZones(props.botZones, DIVIDER_Y, botH))
+const botZoneList = computed(() =>
+  computeHalfZones(props.botZones, DIVIDER_Y, botH),
+)
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -167,9 +203,15 @@ const botZoneList = computed(() => computeHalfZones(props.botZones, DIVIDER_Y, b
  * @param half - 'top' or 'bottom' half of the button
  * @param position - 'inner' (near divider) or 'outer' (near edge)
  */
-function indicatorCY(zone: Zone, half: 'top' | 'bottom', position: 'inner' | 'outer'): number {
+function indicatorCY(
+  zone: Zone,
+  half: 'top' | 'bottom',
+  position: 'inner' | 'outer',
+): number {
   // Inner = towards the horizontal divider, Outer = towards the button edge
-  const atBottom = (half === 'top' && position === 'inner') || (half === 'bottom' && position === 'outer')
+  const atBottom =
+    (half === 'top' && position === 'inner') ||
+    (half === 'bottom' && position === 'outer')
   if (atBottom) {
     return zone.y + zone.h - INDICATOR_MARGIN_BOTTOM
   } else {
@@ -178,7 +220,12 @@ function indicatorCY(zone: Zone, half: 'top' | 'bottom', position: 'inner' | 'ou
 }
 
 /** SVG transform to center a 24×24 MDI icon path at (cx, cy) scaled to given size (mm) */
-function iconTransform(cx: number, cy: number, sizeMm?: number, rotation?: number): string {
+function iconTransform(
+  cx: number,
+  cy: number,
+  sizeMm?: number,
+  rotation?: number,
+): string {
   const s = (sizeMm ?? ICON_SIZE) / 24
   const tx = cx - (24 * s) / 2
   const ty = cy - (24 * s) / 2

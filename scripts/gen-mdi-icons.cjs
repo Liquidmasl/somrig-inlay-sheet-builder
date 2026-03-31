@@ -4,8 +4,8 @@
 // Re-run after upgrading @mdi/js.
 
 const mdi = require('../node_modules/@mdi/js/commonjs/mdi.js')
-const fs = require('fs')
-const path = require('path')
+const fs = require('node:fs')
+const path = require('node:path')
 
 function keyToName(key) {
   return key
@@ -14,9 +14,13 @@ function keyToName(key) {
     .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
 }
 
-const keys = Object.keys(mdi).filter(k => k.startsWith('mdi')).sort()
-const icons = keys.map(k => [keyToName(k), mdi[k]])
+const keys = Object.keys(mdi)
+  .filter((k) => k.startsWith('mdi'))
+  .sort()
+const icons = keys.map((k) => [keyToName(k), mdi[k]])
 
 const out = path.join(__dirname, '../src/data/mdiAllIconsData.json')
 fs.writeFileSync(out, JSON.stringify(icons))
-console.log(`Generated ${icons.length} icons → ${out} (${(fs.statSync(out).size / 1024).toFixed(0)} KB)`)
+console.log(
+  `Generated ${icons.length} icons → ${out} (${(fs.statSync(out).size / 1024).toFixed(0)} KB)`,
+)
