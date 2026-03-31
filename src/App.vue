@@ -107,7 +107,7 @@ function handleAddButton() {
                 :vertical-separator="activeSheet.buttons.find(b => b.id === activeButtonId)!.verticalSeparator"
                 :stroke-color="strokeColor"
                 :fill-color="fillColor"
-                :scale="1"
+                :scale="0.7"
               />
             </div>
 
@@ -190,7 +190,7 @@ function handleAddButton() {
 
     <!-- Floating editor panel - vertical on mobile, horizontal on desktop -->
     <div class="no-print fixed bottom-0 left-0 right-0 flex justify-center p-2 md:p-4 pointer-events-none">
-      <aside class="pointer-events-auto w-full max-w-4xl bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden max-h-[380px] md:max-h-none overflow-y-auto">
+      <aside class="pointer-events-auto w-full max-w-4xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg rounded-t-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden max-h-[50vh] md:max-h-none overflow-y-auto">
         <ButtonEditorPanel class="md:hidden" layout="vertical" />
         <ButtonEditorPanel class="hidden md:block" layout="horizontal" />
       </aside>
