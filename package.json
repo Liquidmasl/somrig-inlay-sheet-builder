@@ -10,7 +10,13 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "screenshot": "playwright test tests/e2e/screenshot.spec.ts",
-    "generate:icons": "node scripts/gen-mdi-icons.cjs"
+    "generate:icons": "node scripts/gen-mdi-icons.cjs",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,js,vue,json}": "biome check --write --no-errors-on-unmatched"
   },
   "dependencies": {
     "@mdi/js": "^7.4.47",
@@ -19,10 +25,13 @@
     "vue": "^3.5.30"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.10",
     "@playwright/test": "^1.58.2",
     "@types/node": "^24.12.0",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vue/tsconfig": "^0.9.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "typescript": "~5.9.3",
     "vite": "^8.0.1",
     "vue-tsc": "^3.2.5"

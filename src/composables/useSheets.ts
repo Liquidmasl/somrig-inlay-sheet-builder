@@ -1,5 +1,12 @@
-import { ref, computed } from 'vue'
-import type { ActionType, ActionZone, ButtonInlay, IndicatorPosition, SeparatorStyle, Sheet } from '../types'
+import { computed, ref } from 'vue'
+import type {
+  ActionType,
+  ActionZone,
+  ButtonInlay,
+  IndicatorPosition,
+  SeparatorStyle,
+  Sheet,
+} from '../types'
 
 const DEFAULT_ZONE_TYPES: ActionType[] = ['single', 'hold', 'double']
 
@@ -48,24 +55,30 @@ const activeSheetId = ref<string>(sheets.value[0].id)
 const activeButtonId = ref<string | null>(sheets.value[0].buttons[0].id)
 
 export function useSheets() {
-  const activeSheet = computed(() =>
-    sheets.value.find(s => s.id === activeSheetId.value) ?? null
+  const activeSheet = computed(
+    () => sheets.value.find((s) => s.id === activeSheetId.value) ?? null,
   )
 
   const activeButton = computed(() => {
     if (!activeButtonId.value) return null
-    return activeSheet.value?.buttons.find(b => b.id === activeButtonId.value) ?? null
+    return (
+      activeSheet.value?.buttons.find((b) => b.id === activeButtonId.value) ??
+      null
+    )
   })
 
   function addSheet(name?: string): Sheet {
     const id = nextId()
-    const sheet = createDefaultSheet(id, name ?? `Sheet ${sheets.value.length + 1}`)
+    const sheet = createDefaultSheet(
+      id,
+      name ?? `Sheet ${sheets.value.length + 1}`,
+    )
     sheets.value.push(sheet)
     return sheet
   }
 
   function removeSheet(sheetId: string): void {
-    const idx = sheets.value.findIndex(s => s.id === sheetId)
+    const idx = sheets.value.findIndex((s) => s.id === sheetId)
     if (idx === -1) return
     sheets.value.splice(idx, 1)
     if (activeSheetId.value === sheetId) {
@@ -75,7 +88,7 @@ export function useSheets() {
   }
 
   function addButton(sheetId: string): ButtonInlay | null {
-    const sheet = sheets.value.find(s => s.id === sheetId)
+    const sheet = sheets.value.find((s) => s.id === sheetId)
     if (!sheet) return null
     const btn = createDefaultButtonInlay(`${sheetId}-btn-${nextId()}`)
     sheet.buttons.push(btn)
@@ -83,9 +96,9 @@ export function useSheets() {
   }
 
   function removeButton(sheetId: string, buttonId: string): void {
-    const sheet = sheets.value.find(s => s.id === sheetId)
+    const sheet = sheets.value.find((s) => s.id === sheetId)
     if (!sheet) return
-    const idx = sheet.buttons.findIndex(b => b.id === buttonId)
+    const idx = sheet.buttons.findIndex((b) => b.id === buttonId)
     if (idx === -1) return
     sheet.buttons.splice(idx, 1)
     if (activeButtonId.value === buttonId) {
@@ -95,13 +108,17 @@ export function useSheets() {
 
   function findButton(buttonId: string): ButtonInlay | null {
     for (const sheet of sheets.value) {
-      const btn = sheet.buttons.find(b => b.id === buttonId)
+      const btn = sheet.buttons.find((b) => b.id === buttonId)
       if (btn) return btn
     }
     return null
   }
 
-  function setZoneCount(buttonId: string, half: 'top' | 'bottom', count: 1 | 2 | 3): void {
+  function setZoneCount(
+    buttonId: string,
+    half: 'top' | 'bottom',
+    count: 1 | 2 | 3,
+  ): void {
     const button = findButton(buttonId)
     if (!button) return
     const phys = half === 'top' ? button.top : button.bottom
@@ -144,7 +161,10 @@ export function useSheets() {
   ): void {
     const button = findButton(buttonId)
     if (!button) return
-    const separator = separatorType === 'horizontal' ? button.horizontalSeparator : button.verticalSeparator
+    const separator =
+      separatorType === 'horizontal'
+        ? button.horizontalSeparator
+        : button.verticalSeparator
     Object.assign(separator, patch)
   }
 

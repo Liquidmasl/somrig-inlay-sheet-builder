@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { mdiHeart, mdiWeatherNight, mdiWeatherSunny } from '@mdi/js'
 import { ref } from 'vue'
-import { mdiWeatherNight, mdiWeatherSunny, mdiHeart } from '@mdi/js'
 import { useDarkMode } from '../composables/useDarkMode'
 import DonationModal from './DonationModal.vue'
 
