@@ -51,3 +51,8 @@
     height: 71.9mm !important;
   }
 }
+
+/* Hide scrollbar for carousel on WebKit browsers */
+.overflow-x-auto::-webkit-scrollbar {
+  display: none;
+}

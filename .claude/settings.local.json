@@ -17,7 +17,8 @@
       "Bash(npm run build:*)",
       "mcp__linear-server__save_issue",
       "Bash(identify:*)",
-      "mcp__playwright__browser_run_code"
+      "mcp__playwright__browser_run_code",
+      "mcp__playwright__browser_evaluate"
     ]
   }
 }

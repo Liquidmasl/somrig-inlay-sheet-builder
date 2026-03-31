@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { mdiImageOffOutline, mdiChevronDown, mdiChevronUp, mdiPlus } from '@mdi/js'
 import { useSheets } from '../composables/useSheets'
 import IconPickerModal from './IconPickerModal.vue'
@@ -18,11 +18,26 @@ const { activeButton, setZoneCount, updateZone, setIndicatorPosition, updateSepa
 const activeTopZone = ref(0)
 const activeBotZone = ref(0)
 
-// Active half for mobile tabs
-const activeHalf = ref<'top' | 'bottom'>('top')
+// Active tab for mobile (top, bottom, or background)
+const activeHalf = ref<'top' | 'bottom' | 'background'>('top')
 
-// Collapsible separators section for horizontal layout
-const separatorsExpanded = ref(false)
+// Watch for button changes and reset zone indices if out of bounds
+watch(activeButton, (newButton) => {
+  if (!newButton) return
+
+  // Reset top zone if current index is out of bounds
+  if (activeTopZone.value >= newButton.top.zones.length) {
+    activeTopZone.value = 0
+  }
+
+  // Reset bottom zone if current index is out of bounds
+  if (activeBotZone.value >= newButton.bottom.zones.length) {
+    activeBotZone.value = 0
+  }
+})
+
+// Collapsible background section for horizontal layout
+const backgroundExpanded = ref(false)
 
 // Icon picker state
 const pickerOpen = ref(false)
@@ -201,6 +216,17 @@ function onUpdateSeparator(
         >
           Bottom Half
         </button>
+        <button
+          class="flex-1 px-4 py-3 text-sm font-medium transition-colors"
+          :class="
+            activeHalf === 'background'
+              ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-white dark:bg-gray-800'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+          "
+          @click="activeHalf = 'background'"
+        >
+          Background
+        </button>
       </div>
 
       <!-- Controls container: vertical stack or horizontal grid -->
@@ -230,7 +256,7 @@ function onUpdateSeparator(
                 <button
                   v-for="n in topZoneCount"
                   :key="n"
-                  class="px-4 py-1.5 text-sm font-medium transition-colors"
+                  class="px-3 py-1 md:px-4 md:py-1.5 text-xs md:text-sm font-medium transition-colors"
                   :class="
                     n - 1 === activeTopZone
                       ? 'bg-blue-600 text-white'
@@ -243,7 +269,7 @@ function onUpdateSeparator(
                 <!-- Add zone button (only if < 3 zones) -->
                 <button
                   v-if="topZoneCount < 3"
-                  class="px-3 py-1.5 text-sm font-medium transition-colors bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                  class="px-2 py-1 md:px-3 md:py-1.5 text-sm font-medium transition-colors bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                   title="Add zone"
                   @click="onAddZone('top')"
                 >
@@ -259,7 +285,7 @@ function onUpdateSeparator(
                 <button
                   v-for="pos in INDICATOR_POSITIONS"
                   :key="pos"
-                  class="px-3 py-1.5 text-xs font-medium transition-colors"
+                  class="px-2 py-1 md:px-3 md:py-1.5 text-xs md:text-sm font-medium transition-colors"
                   :class="
                     activeButton.top.indicatorPosition === pos
                       ? 'bg-blue-600 text-white'
@@ -311,7 +337,7 @@ function onUpdateSeparator(
               <!-- Icon picker -->
               <div class="flex items-center gap-2">
                 <button
-                  class="flex-1 flex items-center gap-2 px-2 py-1.5 rounded-md border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 text-sm text-left transition-colors bg-white dark:bg-gray-800"
+                  class="flex-1 flex items-center gap-2 px-2 py-1.5 min-h-[36px] rounded-md border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 text-sm text-left transition-colors bg-white dark:bg-gray-800"
                   :title="activeButton.top.zones[activeTopZone].icon ? 'Change icon' : 'Pick icon'"
                   @click="openIconPicker('top', activeTopZone)"
                 >
@@ -323,7 +349,7 @@ function onUpdateSeparator(
                   >
                     <path :d="activeButton.top.zones[activeTopZone].icon!" />
                   </svg>
-                  <span class="text-gray-400 text-xs" :class="{ 'text-gray-700 dark:text-gray-300': activeButton.top.zones[activeTopZone].icon }">
+                  <span class="text-gray-400 text-xs truncate" :class="{ 'text-gray-700 dark:text-gray-300': activeButton.top.zones[activeTopZone].icon }">
                     {{ activeButton.top.zones[activeTopZone].icon ? 'Change icon' : 'No icon — click to add' }}
                   </span>
                 </button>
@@ -338,7 +364,7 @@ function onUpdateSeparator(
               </div>
 
               <!-- Icon size and color (side-by-side) -->
-              <div class="flex gap-3">
+              <div class="flex items-center gap-3">
                 <!-- Icon size (left half) -->
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center justify-between mb-1">
@@ -394,7 +420,7 @@ function onUpdateSeparator(
                 <button
                   v-for="n in botZoneCount"
                   :key="n"
-                  class="px-4 py-1.5 text-sm font-medium transition-colors"
+                  class="px-3 py-1 md:px-4 md:py-1.5 text-xs md:text-sm font-medium transition-colors"
                   :class="
                     n - 1 === activeBotZone
                       ? 'bg-blue-600 text-white'
@@ -407,7 +433,7 @@ function onUpdateSeparator(
                 <!-- Add zone button (only if < 3 zones) -->
                 <button
                   v-if="botZoneCount < 3"
-                  class="px-3 py-1.5 text-sm font-medium transition-colors bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
+                  class="px-2 py-1 md:px-3 md:py-1.5 text-sm font-medium transition-colors bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30"
                   title="Add zone"
                   @click="onAddZone('bottom')"
                 >
@@ -423,7 +449,7 @@ function onUpdateSeparator(
                 <button
                   v-for="pos in INDICATOR_POSITIONS"
                   :key="pos"
-                  class="px-3 py-1.5 text-xs font-medium transition-colors"
+                  class="px-2 py-1 md:px-3 md:py-1.5 text-xs md:text-sm font-medium transition-colors"
                   :class="
                     activeButton.bottom.indicatorPosition === pos
                       ? 'bg-blue-600 text-white'
@@ -475,7 +501,7 @@ function onUpdateSeparator(
               <!-- Icon picker -->
               <div class="flex items-center gap-2">
                 <button
-                  class="flex-1 flex items-center gap-2 px-2 py-1.5 rounded-md border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 text-sm text-left transition-colors bg-white dark:bg-gray-800"
+                  class="flex-1 flex items-center gap-2 px-2 py-1.5 min-h-[36px] rounded-md border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 text-sm text-left transition-colors bg-white dark:bg-gray-800"
                   :title="activeButton.bottom.zones[activeBotZone].icon ? 'Change icon' : 'Pick icon'"
                   @click="openIconPicker('bottom', activeBotZone)"
                 >
@@ -487,7 +513,7 @@ function onUpdateSeparator(
                   >
                     <path :d="activeButton.bottom.zones[activeBotZone].icon!" />
                   </svg>
-                  <span class="text-gray-400 text-xs" :class="{ 'text-gray-700 dark:text-gray-300': activeButton.bottom.zones[activeBotZone].icon }">
+                  <span class="text-gray-400 text-xs truncate" :class="{ 'text-gray-700 dark:text-gray-300': activeButton.bottom.zones[activeBotZone].icon }">
                     {{ activeButton.bottom.zones[activeBotZone].icon ? 'Change icon' : 'No icon — click to add' }}
                   </span>
                 </button>
@@ -502,7 +528,7 @@ function onUpdateSeparator(
               </div>
 
               <!-- Icon size and color (side-by-side) -->
-              <div class="flex gap-3">
+              <div class="flex items-center gap-3">
                 <!-- Icon size (left half) -->
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center justify-between mb-1">
@@ -537,25 +563,25 @@ function onUpdateSeparator(
           </div>
         </section>
 
-        <!-- Separators section -->
-        <section :class="layout === 'horizontal' ? 'col-span-2 border-t border-gray-200 dark:border-gray-700 pt-4' : ''">
+        <!-- Background section -->
+        <section
+          v-if="layout === 'horizontal' || activeHalf === 'background'"
+          :class="layout === 'horizontal' ? 'col-span-2 border-t border-gray-200 dark:border-gray-700 pt-4' : ''"
+        >
           <button
             v-if="layout === 'horizontal'"
             class="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3 hover:text-gray-700 dark:hover:text-gray-300"
-            @click="separatorsExpanded = !separatorsExpanded"
+            @click="backgroundExpanded = !backgroundExpanded"
           >
             <svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor">
-              <path :d="separatorsExpanded ? mdiChevronUp : mdiChevronDown" />
+              <path :d="backgroundExpanded ? mdiChevronUp : mdiChevronDown" />
             </svg>
-            Separators
+            Background
           </button>
-          <h3 v-else class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">
-            Separators
-          </h3>
 
-          <!-- Separator controls (collapsible in horizontal mode) -->
+          <!-- Background controls (collapsible in horizontal mode) -->
           <div
-            v-show="layout !== 'horizontal' || separatorsExpanded"
+            v-show="layout !== 'horizontal' || backgroundExpanded"
             :class="layout === 'horizontal' ? 'grid grid-cols-2 gap-4' : ''"
           >
           <!-- Horizontal separator -->
