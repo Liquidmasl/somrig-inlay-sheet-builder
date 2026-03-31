@@ -72,11 +72,6 @@ function actionTypeLabel(type: ActionType): string {
   return 'Hold'
 }
 
-function indicatorSymbol(type: ActionType): string {
-  if (type === 'single') return '●'
-  if (type === 'double') return '●●'
-  return '▬'
-}
 
 const topZoneCount = computed(() => (activeButton.value?.top.zones.length ?? 1) as 1 | 2 | 3)
 const botZoneCount = computed(() => (activeButton.value?.bottom.zones.length ?? 1) as 1 | 2 | 3)
@@ -131,7 +126,7 @@ function onRemoveZone(half: 'top' | 'bottom', zoneIndex: number) {
 function onUpdateZone(
   half: 'top' | 'bottom',
   zoneIndex: number,
-  field: 'iconSize' | 'iconColor',
+  field: 'iconSize' | 'iconColor' | 'iconRotation',
   value: string | number,
 ) {
   if (!activeButton.value) return
@@ -320,12 +315,11 @@ function onUpdateSeparator(
                     :aria-label="`Set zone ${activeTopZone + 1} type to ${actionTypeLabel(t)}`"
                     @click="onSetZoneType('top', activeTopZone, t)"
                   >
-                    <!-- {{ indicatorSymbol(t) }} -->
                       <svg v-if="t === 'single'" viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor">
                         <circle cx="12" cy="12" r="5" />
                       </svg>
                       <svg v-else-if="t === 'double'" viewBox="0 0 24 24" class="w-6 h-4" fill="currentColor">
-                        <circle :cx="12+10" cy="12" r="5" /> <circle :cx="12-10" cy="12" r="5" />
+                        <circle :cx="12+8" cy="12" r="5" /> <circle :cx="12-8" cy="12" r="5" />
                       </svg>
                       <svg v-else-if="t === 'hold'" viewBox="0 0 24 24" class="w-6 h-4" fill="currentColor">
                         <rect
@@ -383,7 +377,7 @@ function onUpdateSeparator(
               <!-- Icon size and color (side-by-side) -->
               <div class="flex items-center gap-3 justify-between">
                 <!-- Icon size (left half) -->
-                <div class="flex-2 min-w-0">
+                <div class="flex-4 min-w-0">
                   <div class="flex items-center justify-between mb-1">
                     <label class="text-xs text-gray-500">Size</label>
                     <span class="text-xs text-gray-500">{{ activeButton.top.zones[activeTopZone].iconSize }} mm</span>
@@ -399,15 +393,30 @@ function onUpdateSeparator(
                   />
                 </div>
 
+                <!-- Icon rotation -->
+                <div class="min-w-0 pl-2">
+                  <label class="block text-xs text-gray-500 mb-1 text-left">Rotation</label>
+                  <div class="flex items-center gap-1 justify-start">
+                    <input
+                      type="number"
+                      min="-360"
+                      max="360"
+                      :value="activeButton.top.zones[activeTopZone].iconRotation ?? 0"
+                      class="h-7 w-10 rounded border border-gray-200 dark:border-gray-700 bg-transparent text-xs text-center shrink-0"
+                      @input="onUpdateZone('top', activeTopZone, 'iconRotation', parseFloat(($event.target as HTMLInputElement).value))"
+                    />
+                    <span class="text-xs text-gray-400">°</span>
+                  </div>
+                </div>
+
                 <!-- Icon color (right half) -->
-                <div class="flex-1 min-w-0">
-                  <label class="block text-xs text-gray-500 mb-1 text-right">Color</label>
-                  <div class="flex items-center gap-2 justify-end">
-                    <span class="text-xs text-gray-400 font-mono truncate">{{ activeButton.top.zones[activeTopZone].iconColor }}</span>
+                <div class="min-w-0 pl-2">
+                  <label class="block text-xs text-gray-500 mb-1 text-left">Color</label>
+                  <div class="flex items-center gap-2 justify-start">
                     <input
                       type="color"
                       :value="activeButton.top.zones[activeTopZone].iconColor"
-                      class="h-7 w-12 rounded cursor-pointer border border-gray-200 dark:border-gray-700 bg-transparent shrink-0"
+                      class="h-7 w-8 rounded cursor-pointer border border-gray-200 dark:border-gray-700 bg-transparent shrink-0"
                       @input="onUpdateZone('top', activeTopZone, 'iconColor', ($event.target as HTMLInputElement).value)"
                     />
                   </div>
@@ -501,7 +510,22 @@ function onUpdateSeparator(
                     :aria-label="`Set zone ${activeBotZone + 1} type to ${actionTypeLabel(t)}`"
                     @click="onSetZoneType('bottom', activeBotZone, t)"
                   >
-                    {{ indicatorSymbol(t) }}
+                      <svg v-if="t === 'single'" viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor">
+                        <circle cx="12" cy="12" r="5" />
+                      </svg>
+                      <svg v-else-if="t === 'double'" viewBox="0 0 24 24" class="w-6 h-4" fill="currentColor">
+                        <circle :cx="12+8" cy="12" r="5" /> <circle :cx="12-8" cy="12" r="5" />
+                      </svg>
+                      <svg v-else-if="t === 'hold'" viewBox="0 0 24 24" class="w-6 h-4" fill="currentColor">
+                        <rect
+                          x="-3"
+                          y="7"
+                          width="30"
+                          height="10"
+                          rx="5"
+                          ry="5"
+                        />
+                      </svg>
                   </button>
                 </div>
                 <!-- Remove zone button (only for zones 2 and 3) -->
@@ -545,9 +569,9 @@ function onUpdateSeparator(
               </div>
 
               <!-- Icon size and color (side-by-side) -->
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-3 justify-between">
                 <!-- Icon size (left half) -->
-                <div class="flex-2 min-w-0">
+                <div class="flex-4 min-w-0">
                   <div class="flex items-center justify-between mb-1">
                     <label class="text-xs text-gray-500">Size</label>
                     <span class="text-xs text-gray-500">{{ activeButton.bottom.zones[activeBotZone].iconSize }} mm</span>
@@ -563,15 +587,30 @@ function onUpdateSeparator(
                   />
                 </div>
 
+                <!-- Icon rotation -->
+                <div class="min-w-0 pl-2">
+                  <label class="block text-xs text-gray-500 mb-1 text-left">Rotation</label>
+                  <div class="flex items-center gap-1 justify-start">
+                    <input
+                      type="number"
+                      min="-360"
+                      max="360"
+                      :value="activeButton.bottom.zones[activeBotZone].iconRotation ?? 0"
+                      class="h-7 w-10 rounded border border-gray-200 dark:border-gray-700 bg-transparent text-xs text-center shrink-0"
+                      @input="onUpdateZone('bottom', activeBotZone, 'iconRotation', parseFloat(($event.target as HTMLInputElement).value))"
+                    />
+                    <span class="text-xs text-gray-400">°</span>
+                  </div>
+                </div>
+
                 <!-- Icon color (right half) -->
-                <div class="flex-1 min-w-0">
-                  <label class="block text-xs text-gray-500 mb-1 text-right">Color</label>
-                  <div class="flex items-center gap-2 justify-end">
-                    <span class="text-xs text-gray-400 font-mono truncate">{{ activeButton.bottom.zones[activeBotZone].iconColor }}</span>
+                <div class="min-w-0 pl-2">
+                  <label class="block text-xs text-gray-500 mb-1 text-left">Color</label>
+                  <div class="flex items-center gap-2 justify-start">
                     <input
                       type="color"
                       :value="activeButton.bottom.zones[activeBotZone].iconColor"
-                      class="h-7 w-12 rounded cursor-pointer border border-gray-200 dark:border-gray-700 bg-transparent shrink-0"
+                      class="h-7 w-8 rounded cursor-pointer border border-gray-200 dark:border-gray-700 bg-transparent shrink-0"
                       @input="onUpdateZone('bottom', activeBotZone, 'iconColor', ($event.target as HTMLInputElement).value)"
                     />
                   </div>
