@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__linear-server__get_issue",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "mcp__linear-server__list_issues",
+      "Bash(nvm list)",
+      "Bash(fnm list:*)",
+      "Bash(where:*)",
+      "Bash(node --version:*)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_resize",
+      "Bash(npm run build:*)",
+      "mcp__linear-server__save_issue",
+      "Bash(identify:*)",
+      "mcp__playwright__browser_run_code",
+      "mcp__playwright__browser_evaluate"
+    ]
+  }
+}

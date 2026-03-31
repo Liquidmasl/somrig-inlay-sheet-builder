@@ -32,6 +32,12 @@ export interface ZoneConfig {
   iconColor?: string
 }
 
+export interface SeparatorStyleProp {
+  thickness?: number
+  color?: string
+  style?: 'solid' | 'dashed' | 'dotted'
+}
+
 const props = withDefaults(defineProps<{
   /** Number of zones in the top half: 1 = full, 2 = split, 3 = thirds */
   topZones?: ZoneCount
@@ -41,6 +47,14 @@ const props = withDefaults(defineProps<{
   topZoneConfig?: ZoneConfig[]
   /** Per-zone config for bottom half (index 0 = first zone from left) */
   botZoneConfig?: ZoneConfig[]
+  /** Indicator position for top half: 'inner' = near divider, 'outer' = near edge */
+  topIndicatorPos?: 'inner' | 'outer'
+  /** Indicator position for bottom half: 'inner' = near divider, 'outer' = near edge */
+  botIndicatorPos?: 'inner' | 'outer'
+  /** Horizontal separator style (divider between top and bottom) */
+  horizontalSeparator?: SeparatorStyleProp
+  /** Vertical separator style (zone dividers) */
+  verticalSeparator?: SeparatorStyleProp
   /** Stroke color for outlines/dividers */
   strokeColor?: string
   /** Fill color for the inlay background */
@@ -54,11 +68,23 @@ const props = withDefaults(defineProps<{
   botZones: 1,
   topZoneConfig: () => [],
   botZoneConfig: () => [],
+  topIndicatorPos: 'inner',
+  botIndicatorPos: 'inner',
+  horizontalSeparator: () => ({ thickness: 0.3, color: '#000000', style: 'solid' as const }),
+  verticalSeparator: () => ({ thickness: 0.3, color: '#000000', style: 'solid' as const }),
   strokeColor: '#000000',
   fillColor: '#ffffff',
   iconColor: '#000000',
   scale: 1,
 })
+
+/** Convert line style to stroke-dasharray value */
+function getDashArray(style: 'solid' | 'dashed' | 'dotted' | undefined, thickness: number): string | undefined {
+  if (!style || style === 'solid') return undefined
+  if (style === 'dashed') return `${thickness * 4} ${thickness * 2}`
+  if (style === 'dotted') return `${thickness} ${thickness * 2}`
+  return undefined
+}
 
 // ── Physical dimensions (mm) ─────────────────────────────────────────────────
 const W = 41.2
@@ -133,9 +159,20 @@ const botZoneList = computed(() => computeHalfZones(props.botZones, DIVIDER_Y, b
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** cy for the indicator in a zone */
-function indicatorCY(zone: Zone): number {
-  return zone.y + zone.h - INDICATOR_MARGIN_BOTTOM
+/**
+ * cy for the indicator in a zone
+ * @param zone - The zone geometry
+ * @param half - 'top' or 'bottom' half of the button
+ * @param position - 'inner' (near divider) or 'outer' (near edge)
+ */
+function indicatorCY(zone: Zone, half: 'top' | 'bottom', position: 'inner' | 'outer'): number {
+  // Inner = towards the horizontal divider, Outer = towards the button edge
+  const atBottom = (half === 'top' && position === 'inner') || (half === 'bottom' && position === 'outer')
+  if (atBottom) {
+    return zone.y + zone.h - INDICATOR_MARGIN_BOTTOM
+  } else {
+    return zone.y + INDICATOR_MARGIN_BOTTOM
+  }
 }
 
 /** SVG transform to center a 24×24 MDI icon path at (cx, cy) scaled to given size (mm) */
@@ -187,8 +224,9 @@ const botDividers = computed(() => vertDividers(props.botZones))
       <line
         x1="0" :y1="DIVIDER_Y"
         :x2="W" :y2="DIVIDER_Y"
-        :stroke="strokeColor"
-        stroke-width="0.3"
+        :stroke="horizontalSeparator?.color ?? strokeColor"
+        :stroke-width="horizontalSeparator?.thickness ?? 0.3"
+        :stroke-dasharray="getDashArray(horizontalSeparator?.style, horizontalSeparator?.thickness ?? 0.3)"
       />
 
       <!-- Top-half vertical dividers (span top half only) -->
@@ -197,8 +235,9 @@ const botDividers = computed(() => vertDividers(props.botZones))
         :key="`top-vdiv-${vx}`"
         :x1="vx" y1="0"
         :x2="vx" :y2="DIVIDER_Y"
-        :stroke="strokeColor"
-        stroke-width="0.3"
+        :stroke="verticalSeparator?.color ?? strokeColor"
+        :stroke-width="verticalSeparator?.thickness ?? 0.3"
+        :stroke-dasharray="getDashArray(verticalSeparator?.style, verticalSeparator?.thickness ?? 0.3)"
       />
 
       <!-- Bottom-half vertical dividers (span bottom half only) -->
@@ -207,8 +246,9 @@ const botDividers = computed(() => vertDividers(props.botZones))
         :key="`bot-vdiv-${vx}`"
         :x1="vx" :y1="DIVIDER_Y"
         :x2="vx" :y2="H"
-        :stroke="strokeColor"
-        stroke-width="0.3"
+        :stroke="verticalSeparator?.color ?? strokeColor"
+        :stroke-width="verticalSeparator?.thickness ?? 0.3"
+        :stroke-dasharray="getDashArray(verticalSeparator?.style, verticalSeparator?.thickness ?? 0.3)"
       />
 
       <!-- Top-half zones: icon + indicator -->
@@ -226,7 +266,7 @@ const botDividers = computed(() => vertDividers(props.botZones))
         <circle
           v-if="topZoneConfig[i]?.indicator === 'dot'"
           :cx="zone.cx"
-          :cy="indicatorCY(zone)"
+          :cy="indicatorCY(zone, 'top', topIndicatorPos)"
           :r="DOT_R"
           :fill="iconColor"
         />
@@ -235,13 +275,13 @@ const botDividers = computed(() => vertDividers(props.botZones))
         <g v-else-if="topZoneConfig[i]?.indicator === 'double-dot'">
           <circle
             :cx="zone.cx - DOT_R * 2"
-            :cy="indicatorCY(zone)"
+            :cy="indicatorCY(zone, 'top', topIndicatorPos)"
             :r="DOT_R"
             :fill="iconColor"
           />
           <circle
             :cx="zone.cx + DOT_R * 2"
-            :cy="indicatorCY(zone)"
+            :cy="indicatorCY(zone, 'top', topIndicatorPos)"
             :r="DOT_R"
             :fill="iconColor"
           />
@@ -251,7 +291,7 @@ const botDividers = computed(() => vertDividers(props.botZones))
         <rect
           v-else-if="topZoneConfig[i]?.indicator === 'dash'"
           :x="zone.cx - DASH_W / 2"
-          :y="indicatorCY(zone) - DASH_H / 2"
+          :y="indicatorCY(zone, 'top', topIndicatorPos) - DASH_H / 2"
           :width="DASH_W"
           :height="DASH_H"
           :rx="DASH_R"
@@ -275,7 +315,7 @@ const botDividers = computed(() => vertDividers(props.botZones))
         <circle
           v-if="botZoneConfig[i]?.indicator === 'dot'"
           :cx="zone.cx"
-          :cy="indicatorCY(zone)"
+          :cy="indicatorCY(zone, 'bottom', botIndicatorPos)"
           :r="DOT_R"
           :fill="iconColor"
         />
@@ -284,13 +324,13 @@ const botDividers = computed(() => vertDividers(props.botZones))
         <g v-else-if="botZoneConfig[i]?.indicator === 'double-dot'">
           <circle
             :cx="zone.cx - DOT_R * 2"
-            :cy="indicatorCY(zone)"
+            :cy="indicatorCY(zone, 'bottom', botIndicatorPos)"
             :r="DOT_R"
             :fill="iconColor"
           />
           <circle
             :cx="zone.cx + DOT_R * 2"
-            :cy="indicatorCY(zone)"
+            :cy="indicatorCY(zone, 'bottom', botIndicatorPos)"
             :r="DOT_R"
             :fill="iconColor"
           />
@@ -300,7 +340,7 @@ const botDividers = computed(() => vertDividers(props.botZones))
         <rect
           v-else-if="botZoneConfig[i]?.indicator === 'dash'"
           :x="zone.cx - DASH_W / 2"
-          :y="indicatorCY(zone) - DASH_H / 2"
+          :y="indicatorCY(zone, 'bottom', botIndicatorPos) - DASH_H / 2"
           :width="DASH_W"
           :height="DASH_H"
           :rx="DASH_R"
