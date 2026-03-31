@@ -1,15 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { mdiWeatherNight, mdiWeatherSunny, mdiPrinter, mdiDownload, mdiHeart } from '@mdi/js'
+import { mdiWeatherNight, mdiWeatherSunny, mdiHeart } from '@mdi/js'
 import { useDarkMode } from '../composables/useDarkMode'
 import DonationModal from './DonationModal.vue'
 
 const { isDark, toggle } = useDarkMode()
 const showDonation = ref(false)
-
-function handlePrint() {
-  window.print()
-}
 </script>
 
 <template>
@@ -31,28 +27,6 @@ function handlePrint() {
         <span class="hidden sm:inline">Support</span>
       </button>
 
-      <button
-        @click="handlePrint"
-        class="flex items-center gap-1 px-2 py-1.5 md:px-3 md:py-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-xs md:text-sm"
-        aria-label="Print sheet"
-        title="Print"
-      >
-        <svg viewBox="0 0 24 24" class="w-4 h-4 md:w-5 md:h-5 fill-current">
-          <path :d="mdiPrinter" />
-        </svg>
-        <span class="hidden md:inline">Print</span>
-      </button>
-      <button
-        @click="handlePrint"
-        class="flex items-center gap-1 px-2 py-1.5 md:px-3 md:py-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-xs md:text-sm"
-        aria-label="Download as PDF"
-        title="Download PDF"
-      >
-        <svg viewBox="0 0 24 24" class="w-4 h-4 md:w-5 md:h-5 fill-current">
-          <path :d="mdiDownload" />
-        </svg>
-        <span class="hidden md:inline">Download PDF</span>
-      </button>
       <button
         @click="toggle"
         class="p-1.5 md:p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
