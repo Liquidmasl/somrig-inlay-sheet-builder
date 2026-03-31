@@ -30,6 +30,8 @@ export interface ZoneConfig {
   iconSize?: number
   /** Icon color — overrides component-level iconColor prop */
   iconColor?: string
+
+  iconRotation?: number  // degrees clockwise, default 0, applied after scaling
 }
 
 export interface SeparatorStyleProp {
@@ -176,11 +178,12 @@ function indicatorCY(zone: Zone, half: 'top' | 'bottom', position: 'inner' | 'ou
 }
 
 /** SVG transform to center a 24×24 MDI icon path at (cx, cy) scaled to given size (mm) */
-function iconTransform(cx: number, cy: number, sizeMm?: number): string {
+function iconTransform(cx: number, cy: number, sizeMm?: number, rotation?: number): string {
   const s = (sizeMm ?? ICON_SIZE) / 24
   const tx = cx - (24 * s) / 2
   const ty = cy - (24 * s) / 2
-  return `translate(${tx},${ty}) scale(${s})`
+  const rot = rotation ?? 0
+  return `translate(${tx},${ty}) scale(${s}) rotate(${rot},12,12)`
 }
 
 /** Vertical divider X positions for a given zone count */
@@ -256,7 +259,7 @@ const botDividers = computed(() => vertDividers(props.botZones))
         <!-- MDI Icon -->
         <g
           v-if="topZoneConfig[i]?.icon"
-          :transform="iconTransform(zone.cx, zone.cy, topZoneConfig[i].iconSize)"
+          :transform="iconTransform(zone.cx, zone.cy, topZoneConfig[i].iconSize, topZoneConfig[i].iconRotation)"
           :fill="topZoneConfig[i].iconColor ?? iconColor"
         >
           <path :d="topZoneConfig[i].icon" />
@@ -305,7 +308,7 @@ const botDividers = computed(() => vertDividers(props.botZones))
         <!-- MDI Icon -->
         <g
           v-if="botZoneConfig[i]?.icon"
-          :transform="iconTransform(zone.cx, zone.cy, botZoneConfig[i].iconSize)"
+          :transform="iconTransform(zone.cx, zone.cy, botZoneConfig[i].iconSize, botZoneConfig[i].iconRotation)"
           :fill="botZoneConfig[i].iconColor ?? iconColor"
         >
           <path :d="botZoneConfig[i].icon" />
