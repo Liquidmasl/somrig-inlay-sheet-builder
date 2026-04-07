@@ -143,6 +143,12 @@ function toZoneConfigs(zones: ActionZone[]): ZoneConfig[] {
     iconSize: z.iconSize,
     iconColor: z.iconColor,
     iconRotation: z.iconRotation,
+    label: z.label,
+    labelSize: z.labelSize,
+    labelColor: z.labelColor,
+    labelRotation: z.labelRotation,
+    labelPosition: z.labelPosition,
+    labelShiftIcon: z.labelShiftIcon,
   }))
 }
 
@@ -334,7 +340,8 @@ function handlePrint() {
         style="backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);"
       >
         <ButtonEditorPanel class="md:hidden" layout="vertical" />
-        <ButtonEditorPanel class="hidden md:block" layout="horizontal" />
+        <ButtonEditorPanel class="hidden  md:block" layout="horizontal" />
+
       </aside>
     </div>
   </div>

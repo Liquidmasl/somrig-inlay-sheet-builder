@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Dev server",
+      "runtimeExecutable": "/Users/masl/.nvm/versions/node/v24.14.1/bin/node",
+      "runtimeArgs": ["./node_modules/.bin/vite"],
+      "port": 5173
+    },
+    {
+      "name": "Preview (production build)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview"],
+      "port": 4173
+    }
+  ]
+}
