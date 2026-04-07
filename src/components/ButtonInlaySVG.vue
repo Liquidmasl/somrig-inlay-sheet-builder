@@ -337,7 +337,8 @@ function computeLabelY(zone: Zone, cfg: ZoneConfig): number {
       :d="OUTLINE_PATH"
       :fill="fillColor"
       :stroke="strokeColor"
-      stroke-width="0.3"
+      stroke-width="0.1"
+      stroke-dasharray="0.1, 0.6"
     />
 
     <!-- Content group clipped to outline -->
