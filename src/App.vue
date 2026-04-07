@@ -340,7 +340,8 @@ function handlePrint() {
         style="backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);"
       >
         <ButtonEditorPanel class="md:hidden" layout="vertical" />
-        <ButtonEditorPanel class="hidden md:block" layout="horizontal" />
+        <ButtonEditorPanel class="hidden  md:block" layout="horizontal" />
+
       </aside>
     </div>
   </div>
