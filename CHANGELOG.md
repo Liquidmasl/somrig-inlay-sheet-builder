@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.0] - 2026-04-08
+
+
+- Redesigned editor panel UI with consistent index-card tab visual language for zone and icon/label selectors
+- Inner/Outer indicator repositioned to half level for clearer hierarchy
+- Zone removal now via × on the active tab
+- GitHub link in header
+
+
 ## [0.1.0] - 2026-03-30
 
 
