@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import {
-  mdiChevronDown,
-  mdiChevronUp,
-  mdiImageOffOutline,
-} from '@mdi/js'
+import { mdiChevronDown, mdiChevronUp, mdiImageOffOutline } from '@mdi/js'
 import { computed, ref, watch } from 'vue'
 import { useSheets } from '../composables/useSheets'
 import type {
@@ -165,7 +161,9 @@ function onUpdateZone(
   value: string | number | boolean,
 ) {
   if (!activeButton.value) return
-  updateZone(activeButton.value.id, half, zoneIndex, { [field]: value } as Partial<ActionZone>)
+  updateZone(activeButton.value.id, half, zoneIndex, {
+    [field]: value,
+  } as Partial<ActionZone>)
 }
 
 function onSetZoneType(
