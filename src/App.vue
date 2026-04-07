@@ -143,6 +143,12 @@ function toZoneConfigs(zones: ActionZone[]): ZoneConfig[] {
     iconSize: z.iconSize,
     iconColor: z.iconColor,
     iconRotation: z.iconRotation,
+    label: z.label,
+    labelSize: z.labelSize,
+    labelColor: z.labelColor,
+    labelRotation: z.labelRotation,
+    labelPosition: z.labelPosition,
+    labelShiftIcon: z.labelShiftIcon,
   }))
 }
 
