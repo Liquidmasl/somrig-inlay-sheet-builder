@@ -274,11 +274,20 @@ function computeIconCY(zone: Zone, cfg: ZoneConfig): number {
 /**
  * Rotate point (x, y) around (cx, cy) by deg degrees clockwise (SVG convention).
  */
-function rotatePoint(x: number, y: number, cx: number, cy: number, deg: number): [number, number] {
+function rotatePoint(
+  x: number,
+  y: number,
+  cx: number,
+  cy: number,
+  deg: number,
+): [number, number] {
   const rad = (deg * Math.PI) / 180
   const cos = Math.cos(rad)
   const sin = Math.sin(rad)
-  return [cx + (x - cx) * cos - (y - cy) * sin, cy + (x - cx) * sin + (y - cy) * cos]
+  return [
+    cx + (x - cx) * cos - (y - cy) * sin,
+    cy + (x - cx) * sin + (y - cy) * cos,
+  ]
 }
 
 /**
@@ -289,7 +298,8 @@ function rotatePoint(x: number, y: number, cx: number, cy: number, deg: number):
  */
 function iconRenderCenter(zone: Zone, cfg: ZoneConfig): [number, number] {
   const baseCY = computeIconCY(zone, cfg)
-  if (!cfg.label || !cfg.labelShiftIcon || !cfg.labelRotation) return [zone.cx, baseCY]
+  if (!cfg.label || !cfg.labelShiftIcon || !cfg.labelRotation)
+    return [zone.cx, baseCY]
   return rotatePoint(zone.cx, baseCY, zone.cx, zone.cy, cfg.labelRotation)
 }
 
