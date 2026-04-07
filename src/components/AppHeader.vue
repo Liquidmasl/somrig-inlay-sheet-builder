@@ -11,9 +11,9 @@ const showDonation = ref(false)
 <template>
   <header class="no-print flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
     <div class="flex items-center gap-2">
-      <img src="/lambda_icon.png" alt="Somrig logo" class="h-7 w-auto" />
+      <img src="/lambda_icon.png" alt="Logo" class="h-7 w-auto" />
       <h1 class="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
-        Somrig Sheets
+        Somrig & Rodret Inlays
       </h1>
     </div>
     <div class="flex items-center gap-1 md:gap-2">
@@ -27,7 +27,11 @@ const showDonation = ref(false)
         <svg viewBox="0 0 24 24" class="w-4 h-4 md:w-5 md:h-5 fill-current">
           <path :d="mdiHeart" />
         </svg>
-        <span class="hidden sm:inline">Support</span>
+        <div class="flex items-center flex-col">
+                            <span class="hidden sm:inline">No Ads, send me joy!</span>
+
+                  <span class="hidden sm:inline">€1 = Dev Dopamine ⚡</span>
+          </div>
       </button>
 
       <button

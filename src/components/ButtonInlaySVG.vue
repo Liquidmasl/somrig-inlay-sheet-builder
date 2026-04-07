@@ -30,8 +30,20 @@ export interface ZoneConfig {
   iconSize?: number
   /** Icon color — overrides component-level iconColor prop */
   iconColor?: string
-
-  iconRotation?: number // degrees clockwise, default 0, applied after scaling
+  /** Icon rotation in degrees clockwise, default 0, applied after scaling */
+  iconRotation?: number
+  /** Label text */
+  label?: string
+  /** Label font size in mm, default 3 */
+  labelSize?: number
+  /** Label color — defaults to iconColor at render time */
+  labelColor?: string
+  /** Label rotation in degrees, independent of iconRotation, default 0 */
+  labelRotation?: number
+  /** Label position relative to icon: 'below' (default) or 'above'. Ignored when no icon. */
+  labelPosition?: 'below' | 'above'
+  /** Shift icon toward opposite edge to share zone space with label, default false */
+  labelShiftIcon?: boolean
 }
 
 export interface SeparatorStyleProp {
@@ -242,6 +254,67 @@ function vertDividers(count: ZoneCount): number[] {
 
 const topDividers = computed(() => vertDividers(props.topZones))
 const botDividers = computed(() => vertDividers(props.botZones))
+
+// ── Label layout helpers ──────────────────────────────────────────────────────
+
+const LABEL_GAP = 1 // mm gap between icon edge and label center
+
+/**
+ * Compute the Y center for the icon, shifted when labelShiftIcon is enabled.
+ * When no label or labelShiftIcon is false, icon stays at zone.cy.
+ */
+function computeIconCY(zone: Zone, cfg: ZoneConfig): number {
+  if (!cfg.label || !cfg.labelShiftIcon) return zone.cy
+  const labelSize = cfg.labelSize ?? 3
+  const pos = cfg.labelPosition ?? 'below'
+  const shift = (LABEL_GAP + labelSize) / 2
+  return pos === 'below' ? zone.cy - shift : zone.cy + shift
+}
+
+/**
+ * Rotate point (x, y) around (cx, cy) by deg degrees clockwise (SVG convention).
+ */
+function rotatePoint(x: number, y: number, cx: number, cy: number, deg: number): [number, number] {
+  const rad = (deg * Math.PI) / 180
+  const cos = Math.cos(rad)
+  const sin = Math.sin(rad)
+  return [cx + (x - cx) * cos - (y - cy) * sin, cy + (x - cx) * sin + (y - cy) * cos]
+}
+
+/**
+ * Final render center for the icon.
+ * When labelShiftIcon + labelRotation, the icon's *position* is rotated around
+ * zone center so it stays in the "above/below" relationship with the label in the
+ * rotated frame — without affecting the icon's own visual orientation.
+ */
+function iconRenderCenter(zone: Zone, cfg: ZoneConfig): [number, number] {
+  const baseCY = computeIconCY(zone, cfg)
+  if (!cfg.label || !cfg.labelShiftIcon || !cfg.labelRotation) return [zone.cx, baseCY]
+  return rotatePoint(zone.cx, baseCY, zone.cx, zone.cy, cfg.labelRotation)
+}
+
+/**
+ * Compute the Y center for the label text.
+ * - No icon: centered at zone.cy
+ * - Icon present, labelShiftIcon false: placed at icon edge + gap
+ * - Icon present, labelShiftIcon true: shifted symmetrically with icon
+ */
+function computeLabelY(zone: Zone, cfg: ZoneConfig): number {
+  const labelSize = cfg.labelSize ?? 3
+  const iconSize = cfg.iconSize ?? ICON_SIZE
+  const pos = cfg.labelPosition ?? 'below'
+  const hasIcon = !!cfg.icon
+
+  if (!hasIcon) return zone.cy
+
+  if (!cfg.labelShiftIcon) {
+    const offset = iconSize / 2 + LABEL_GAP + labelSize / 2
+    return pos === 'below' ? zone.cy + offset : zone.cy - offset
+  }
+
+  const shift = (iconSize + LABEL_GAP) / 2
+  return pos === 'below' ? zone.cy + shift : zone.cy - shift
+}
 </script>
 
 <template>
@@ -264,7 +337,8 @@ const botDividers = computed(() => vertDividers(props.botZones))
       :d="OUTLINE_PATH"
       :fill="fillColor"
       :stroke="strokeColor"
-      stroke-width="0.3"
+      stroke-width="0.1"
+      stroke-dasharray="0.1, 0.6"
     />
 
     <!-- Content group clipped to outline -->
@@ -301,16 +375,30 @@ const botDividers = computed(() => vertDividers(props.botZones))
         :stroke-dasharray="getDashArray(verticalSeparator?.style, verticalSeparator?.thickness ?? 0.3)"
       />
 
-      <!-- Top-half zones: icon + indicator -->
+      <!-- Top-half zones: icon + label + indicator -->
       <g v-for="(zone, i) in topZoneList" :key="`top-${i}`">
-        <!-- MDI Icon -->
+        <!-- MDI Icon: position computed via iconRenderCenter so the shift is in the rotated frame without spinning the icon visually -->
         <g
           v-if="topZoneConfig[i]?.icon"
-          :transform="iconTransform(zone.cx, zone.cy, topZoneConfig[i].iconSize, topZoneConfig[i].iconRotation)"
+          :transform="iconTransform(iconRenderCenter(zone, topZoneConfig[i])[0], iconRenderCenter(zone, topZoneConfig[i])[1], topZoneConfig[i].iconSize, topZoneConfig[i].iconRotation)"
           :fill="topZoneConfig[i].iconColor ?? iconColor"
         >
           <path :d="topZoneConfig[i].icon" />
         </g>
+
+        <!-- Label text -->
+        <text
+          v-if="topZoneConfig[i]?.label"
+          :x="zone.cx"
+          :y="computeLabelY(zone, topZoneConfig[i])"
+          text-anchor="middle"
+          dominant-baseline="central"
+          :font-size="topZoneConfig[i].labelSize ?? 3"
+          :fill="topZoneConfig[i].labelColor ?? topZoneConfig[i].iconColor ?? iconColor"
+          :transform="topZoneConfig[i].labelRotation
+            ? `rotate(${topZoneConfig[i].labelRotation},${zone.cx},${zone.cy})`
+            : undefined"
+        >{{ topZoneConfig[i].label }}</text>
 
         <!-- Indicator: dot -->
         <circle
@@ -350,16 +438,30 @@ const botDividers = computed(() => vertDividers(props.botZones))
         />
       </g>
 
-      <!-- Bottom-half zones: icon + indicator -->
+      <!-- Bottom-half zones: icon + label + indicator -->
       <g v-for="(zone, i) in botZoneList" :key="`bot-${i}`">
-        <!-- MDI Icon -->
+        <!-- MDI Icon: position computed via iconRenderCenter so the shift is in the rotated frame without spinning the icon visually -->
         <g
           v-if="botZoneConfig[i]?.icon"
-          :transform="iconTransform(zone.cx, zone.cy, botZoneConfig[i].iconSize, botZoneConfig[i].iconRotation)"
+          :transform="iconTransform(iconRenderCenter(zone, botZoneConfig[i])[0], iconRenderCenter(zone, botZoneConfig[i])[1], botZoneConfig[i].iconSize, botZoneConfig[i].iconRotation)"
           :fill="botZoneConfig[i].iconColor ?? iconColor"
         >
           <path :d="botZoneConfig[i].icon" />
         </g>
+
+        <!-- Label text -->
+        <text
+          v-if="botZoneConfig[i]?.label"
+          :x="zone.cx"
+          :y="computeLabelY(zone, botZoneConfig[i])"
+          text-anchor="middle"
+          dominant-baseline="central"
+          :font-size="botZoneConfig[i].labelSize ?? 3"
+          :fill="botZoneConfig[i].labelColor ?? botZoneConfig[i].iconColor ?? iconColor"
+          :transform="botZoneConfig[i].labelRotation
+            ? `rotate(${botZoneConfig[i].labelRotation},${zone.cx},${zone.cy})`
+            : undefined"
+        >{{ botZoneConfig[i].label }}</text>
 
         <!-- Indicator: dot -->
         <circle

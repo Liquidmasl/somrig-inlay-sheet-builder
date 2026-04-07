@@ -11,9 +11,16 @@ export interface SeparatorStyle {
 export interface ActionZone {
   type: ActionType
   icon: string | null // MDI icon path name (e.g., 'mdiLightbulb')
-  iconSize: number // px, default ~20
+  iconSize: number // mm, default 12
   iconColor: string // hex color, default '#000000'
   iconRotation: number // degrees, default 0
+  // Label
+  label?: string
+  labelSize?: number // mm, default 3
+  labelColor?: string // hex color, defaults to iconColor at render time
+  labelRotation?: number // degrees, default 0, independent of iconRotation
+  labelPosition?: 'below' | 'above' // relative to icon; ignored when no icon, default 'below'
+  labelShiftIcon?: boolean // shift icon up/down to share space with label, default false
 }
 
 export interface PhysicalButton {
