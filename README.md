@@ -2,7 +2,7 @@
 
 A browser-based tool for designing and printing custom inlay sheets for **Somrig** and **Rodret** smart home buttons (IKEA DIRIGERA ecosystem). No account, no install, no data sent anywhere — works entirely in your browser.
 
-**Live app:** [somrig.netlify.app](https://somrig.netlify.app) *(or your Netlify URL)*
+**Live app:** [somrig.marcel1.com](https://somrig.marcel1.com) 
 
 ---
 
