@@ -21,7 +21,7 @@ import type { ActionType, ActionZone, ButtonType } from './types'
 // Physical dimensions per button type (mm)
 const BUTTON_DIMS: Record<ButtonType, { W: number; H: number }> = {
   somrig: { W: 41.2, H: 71.9 },
-  bilresa: { W: 63.3, H: 36.3 },
+  bilresa: { W: 36.3, H: 63.3 },
 }
 
 const { init } = useDarkMode()
