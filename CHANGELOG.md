@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.4.0] - 2026-04-13
+
+- **SVG download** — "Download SVG" button exports the active button inlay as an SVG file with exact physical dimensions (41.2 × 71.9 mm). The screen scale factor is stripped so the file is immediately usable in 3D printing slicers and laser cutting software.
+
 ## [1.3.0] - 2026-04-08
 
 
