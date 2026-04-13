@@ -16,7 +16,13 @@ import ButtonInlaySVG, {
 import { useDarkMode } from './composables/useDarkMode'
 import { useSheets } from './composables/useSheets'
 import { useSvgDownload } from './composables/useSvgDownload'
-import type { ActionType, ActionZone } from './types'
+import type { ActionType, ActionZone, ButtonType } from './types'
+
+// Physical dimensions per button type (mm)
+const BUTTON_DIMS: Record<ButtonType, { W: number; H: number }> = {
+  somrig: { W: 41.2, H: 71.9 },
+  bilresa: { W: 36.3, H: 63.3 },
+}
 
 const { init } = useDarkMode()
 onMounted(() => {
@@ -42,7 +48,13 @@ onUnmounted(() => {
   }
 })
 
-const { activeSheet, activeSheetId, activeButtonId, addButton } = useSheets()
+const { activeSheet, activeSheetId, activeButtonId, addButton, setButtonType } =
+  useSheets()
+
+const activeButtonType = computed<ButtonType>(
+  () => activeSheet.value?.buttonType ?? 'somrig',
+)
+const buttonDims = computed(() => BUTTON_DIMS[activeButtonType.value])
 
 // Mobile navigation
 const carouselRef = ref<HTMLElement | null>(null)
@@ -73,9 +85,8 @@ const previewScale = computed(() => {
     paginationDotsHeight
   const availableHeight = windowHeight.value - chromeHeight
 
-  const buttonHeightMm = 71.9 // Physical button height in mm
   const mmToPixels = 3.7795 // Conversion factor (96 DPI)
-  const maxScale = availableHeight / (buttonHeightMm * mmToPixels)
+  const maxScale = availableHeight / (buttonDims.value.H * mmToPixels)
   return Math.min(Math.max(maxScale, 0.5), 2) // Clamp between 0.5 and 2
 })
 
@@ -193,6 +204,20 @@ function downloadActiveSvg() {
     <!-- Main content area -->
     <main class="flex-1 overflow-auto pt-4 md:pb-[420px] md:pb-72">
       <div class=" mx-auto">
+        <!-- Button model selector -->
+        <div class="flex items-center justify-center gap-1 mb-2">
+          <span class="text-xs text-gray-500 dark:text-gray-400 mr-1">Model:</span>
+          <button
+            v-for="bt in (['somrig', 'bilresa'] as ButtonType[])"
+            :key="bt"
+            @click="setButtonType(activeSheetId, bt)"
+            class="px-2.5 py-1 rounded-md text-xs font-medium transition-colors capitalize"
+            :class="activeButtonType === bt
+              ? 'bg-blue-500 text-white'
+              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'"
+          >{{ bt }}</button>
+        </div>
+
         <!-- Print/Download buttons -->
         <div class="flex items-center justify-center gap-2 mb-3">
           <button
@@ -234,7 +259,7 @@ function downloadActiveSvg() {
         <div class="md:hidden relative">
           <!-- Carousel container (full width, viewport clips edges) -->
           <div ref="carouselRef" class="pt-1 pb-1 overflow-x-auto snap-x snap-mandatory scroll-smooth" style="scrollbar-width: none; -ms-overflow-style: none;">
-            <div class="flex items-center justify-start" :style="`padding-left: calc(50vw - 41.2mm * ${previewScale} / 2 - 8px); padding-right: calc(50vw - 41.2mm * ${previewScale} / 2 - 8px); gap: calc((100vw - (1.5 * ((41.2mm * ${previewScale}) + 16px) ))/2)`">
+            <div class="flex items-center justify-start" :style="`padding-left: calc(50vw - ${buttonDims.W}mm * ${previewScale} / 2 - 8px); padding-right: calc(50vw - ${buttonDims.W}mm * ${previewScale} / 2 - 8px); gap: calc((100vw - (1.5 * ((${buttonDims.W}mm * ${previewScale}) + 16px) ))/2)`">
               <!-- Button cards -->
               <button
                 v-for="btn in activeSheet?.buttons"
@@ -248,6 +273,7 @@ function downloadActiveSvg() {
                 @click="selectButton(btn.id)"
               >
                 <ButtonInlaySVG
+                  :button-type="activeButtonType"
                   :top-zones="(btn.top.zones.length as 1 | 2 | 3)"
                   :bot-zones="(btn.bottom.zones.length as 1 | 2 | 3)"
                   :top-zone-config="toZoneConfigs(btn.top.zones)"
@@ -265,7 +291,7 @@ function downloadActiveSvg() {
               <!-- Add button card -->
               <button
                 class="button-card flex-shrink-0 snap-center rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors bg-white/50 dark:bg-gray-900/50 flex items-center justify-center opacity-60 px-8"
-                :style="{ width: `calc(41.2mm * ${previewScale} + 16px)`, height: `calc(71.9mm * ${previewScale} + 16px)` }"
+                :style="{ width: `calc(${buttonDims.W}mm * ${previewScale} + 16px)`, height: `calc(${buttonDims.H}mm * ${previewScale} + 16px)` }"
                 title="Add button"
                 @click="handleAddButton"
               >
@@ -335,6 +361,7 @@ function downloadActiveSvg() {
             @click="selectButton(btn.id)"
           >
             <ButtonInlaySVG
+              :button-type="activeButtonType"
               :top-zones="(btn.top.zones.length as 1 | 2 | 3)"
               :bot-zones="(btn.bottom.zones.length as 1 | 2 | 3)"
               :top-zone-config="toZoneConfigs(btn.top.zones)"
@@ -352,7 +379,7 @@ function downloadActiveSvg() {
           <!-- Add button -->
           <button
             class="no-print flex items-center justify-center rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors bg-white/50 dark:bg-gray-900/50"
-            :style="{ width: `calc(41.2mm * ${previewScale} + 16px)`, height: `calc(71.9mm * ${previewScale} + 16px)` }"
+            :style="{ width: `calc(${buttonDims.W}mm * ${previewScale} + 16px)`, height: `calc(${buttonDims.H}mm * ${previewScale} + 16px)` }"
             title="Add button"
             @click="handleAddButton"
           >
