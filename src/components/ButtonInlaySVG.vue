@@ -1,25 +1,25 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 /**
- * ButtonInlaySVG — renders a single Somrig button inlay as an SVG.
+ * ButtonInlaySVG — renders a button inlay as an SVG.
  *
- * Physical dimensions (extracted from Aasikki PDF template):
- *   Outer shape: 41.2mm × 71.9mm
- *   Horizontal divider: y = 36.0mm
- *   Vertical center: x = 20.2mm
- *   Dot indicator: 1.5mm diameter circle
- *   Dash indicator: 4.5mm × 1.5mm rounded rect
+ * Supports two button types via the `buttonType` prop:
  *
- * Each button has a top half and a bottom half, each independently configurable:
- *   - topZones / botZones: number of zones (1, 2, or 3) for that half
- *   - topZoneConfig / botZoneConfig: per-zone icon + indicator config
+ * 'somrig'  (default) — portrait 41.2 × 71.9 mm, horizontal divider at y=36mm.
+ *   Physical dimensions from Aasikki PDF template. Zones split left/right within
+ *   each top/bottom half.
  *
- * Each function kind (single=dot, long=dash, double=double-dot) should appear
- * at most once per half — this is a design constraint enforced by the caller.
+ * 'bilresa' — landscape 63.3 × 36.3 mm, vertical divider at x=31.65mm (centre).
+ *   Stadium outline (fully-rounded rectangle, r=18.15mm). Zones split top/bottom
+ *   within each left/right half. 'top' prop/half = left; 'bottom' = right.
+ *
+ * Indicators (dot/dash/double-dot) are positioned near the inner or outer edge
+ * of each half, axis-correct for the button orientation.
  */
 
 export type ZoneCount = 1 | 2 | 3
 export type IndicatorType = 'dot' | 'double-dot' | 'dash' | 'none'
+export type ButtonType = 'somrig' | 'bilresa'
 
 export interface ZoneConfig {
   /** MDI icon path string (from @mdi/js) */
@@ -54,21 +54,23 @@ export interface SeparatorStyleProp {
 
 const props = withDefaults(
   defineProps<{
-    /** Number of zones in the top half: 1 = full, 2 = split, 3 = thirds */
+    /** Button model — controls shape, dimensions and layout orientation */
+    buttonType?: ButtonType
+    /** Number of zones in the top/left half: 1 = full, 2 = split, 3 = thirds */
     topZones?: ZoneCount
-    /** Number of zones in the bottom half: 1 = full, 2 = split, 3 = thirds */
+    /** Number of zones in the bottom/right half: 1 = full, 2 = split, 3 = thirds */
     botZones?: ZoneCount
-    /** Per-zone config for top half (index 0 = first zone from left) */
+    /** Per-zone config for top/left half (index 0 = first zone) */
     topZoneConfig?: ZoneConfig[]
-    /** Per-zone config for bottom half (index 0 = first zone from left) */
+    /** Per-zone config for bottom/right half (index 0 = first zone) */
     botZoneConfig?: ZoneConfig[]
-    /** Indicator position for top half: 'inner' = near divider, 'outer' = near edge */
+    /** Indicator position for top/left half: 'inner' = near divider, 'outer' = near edge */
     topIndicatorPos?: 'inner' | 'outer'
-    /** Indicator position for bottom half: 'inner' = near divider, 'outer' = near edge */
+    /** Indicator position for bottom/right half: 'inner' = near divider, 'outer' = near edge */
     botIndicatorPos?: 'inner' | 'outer'
-    /** Horizontal separator style (divider between top and bottom) */
+    /** Separator style between the two halves */
     horizontalSeparator?: SeparatorStyleProp
-    /** Vertical separator style (zone dividers) */
+    /** Zone sub-divider style */
     verticalSeparator?: SeparatorStyleProp
     /** Stroke color for outlines/dividers */
     strokeColor?: string
@@ -80,6 +82,7 @@ const props = withDefaults(
     scale?: number
   }>(),
   {
+    buttonType: 'somrig',
     topZones: 1,
     botZones: 1,
     topZoneConfig: () => [],
@@ -114,24 +117,22 @@ function getDashArray(
   return undefined
 }
 
-// ── Physical dimensions (mm) ─────────────────────────────────────────────────
-const W = 41.2
-const H = 71.9
-const DIVIDER_Y = 36.0
-const CENTER_X = 20.2
+// ── Button geometry configs ───────────────────────────────────────────────────
 
-// Indicator dimensions (mm)
-const DOT_R = 0.75 // radius = diameter/2
-const DASH_W = 4.5
-const DASH_H = 1.5
-const DASH_R = DASH_H / 2 // fully rounded ends
-const INDICATOR_MARGIN_BOTTOM = 3.5 // mm from bottom of zone to indicator center
+interface ButtonConfig {
+  W: number
+  H: number
+  outlinePath: string
+  /** 'portrait'  → halves are top/bottom, divided by a horizontal line at dividerPos (Y).
+   *               Zones within each half split left/right using zoneCenter (X).
+   *  'landscape' → halves are left/right, divided by a vertical line at dividerPos (X).
+   *               Zones within each half split top/bottom using zoneCenter (Y). */
+  layout: 'portrait' | 'landscape'
+  dividerPos: number // Y for portrait, X for landscape
+  zoneCenter: number // X for portrait (left/right zone split), Y for landscape (top/bottom zone split)
+}
 
-// Icon size (mm) inscribed in each zone — slightly smaller than zone width
-const ICON_SIZE = 12 // mm — MDI icons are 24×24 user units, scaled to this
-
-// Exact outline path extracted from template PDF (mm units, origin 0,0)
-const OUTLINE_PATH =
+const SOMRIG_OUTLINE =
   'M 20.59 0.09 C 27.92 0.09 30.72 0.74 30.72 0.74 C 30.72 0.74 33.07 1.03 35.15 2.67 ' +
   'C 37.24 4.32 39.12 5.81 39.96 11.66 C 40.81 17.51 41.09 35.97 41.09 35.97 ' +
   'C 41.09 35.97 40.81 54.43 39.96 60.27 C 39.12 66.12 37.24 67.61 35.15 69.26 ' +
@@ -141,97 +142,289 @@ const OUTLINE_PATH =
   'C 0.09 35.97 0.37 17.51 1.22 11.66 C 2.06 5.81 3.94 4.32 6.02 2.67 ' +
   'C 8.11 1.03 10.45 0.74 10.45 0.74 C 10.45 0.74 13.26 0.09 20.59 0.09 Z'
 
+// Stadium outline: W=63.3, H=36.3, r=18.15 (= H/2 — fully rounded ends)
+const BILRESA_OUTLINE =
+  'M 18.15 0 L 45.15 0 A 18.15 18.15 0 0 1 45.15 36.3 L 18.15 36.3 A 18.15 18.15 0 0 0 18.15 0 Z'
+
+const BUTTON_CONFIGS: Record<ButtonType, ButtonConfig> = {
+  somrig: {
+    W: 41.2,
+    H: 71.9,
+    outlinePath: SOMRIG_OUTLINE,
+    layout: 'portrait',
+    dividerPos: 36.0,
+    zoneCenter: 20.2,
+  },
+  bilresa: {
+    W: 63.3,
+    H: 36.3,
+    outlinePath: BILRESA_OUTLINE,
+    layout: 'landscape',
+    dividerPos: 31.65, // W / 2
+    zoneCenter: 18.15, // H / 2
+  },
+}
+
+const config = computed(() => BUTTON_CONFIGS[props.buttonType])
+
+// ── Indicator + icon constants (mm) ──────────────────────────────────────────
+const DOT_R = 0.75
+const DASH_W = 4.5
+const DASH_H = 1.5
+const DASH_R = DASH_H / 2
+const INDICATOR_MARGIN = 3.5 // mm from half-edge to indicator centre
+const ICON_SIZE = 12 // default MDI icon size in mm
+
 // Unique clip-path ID (needed when multiple instances on same page)
 const uid = Math.random().toString(36).slice(2, 8)
 const clipId = `inlay-clip-${uid}`
 
 // ── Zone geometry ─────────────────────────────────────────────────────────────
 interface Zone {
-  x: number // left edge (mm)
-  y: number // top edge (mm)
-  w: number // width (mm)
-  h: number // height (mm)
-  cx: number // center x
-  cy: number // center y
+  x: number
+  y: number
+  w: number
+  h: number
+  cx: number
+  cy: number
 }
 
+/**
+ * Compute zones for one half of the button.
+ *
+ * Portrait  (Somrig):  halfStart = yStart, halfLength = half height.
+ *                      Zones are vertical slices (different X, same Y span).
+ * Landscape (BILRESA): halfStart = xStart, halfLength = half width.
+ *                      Zones are horizontal slices (different Y, same X span).
+ */
 function computeHalfZones(
   count: ZoneCount,
-  yStart: number,
-  height: number,
+  halfStart: number,
+  halfLength: number,
 ): Zone[] {
-  if (count === 1) {
-    return [
-      { x: 0, y: yStart, w: W, h: height, cx: W / 2, cy: yStart + height / 2 },
-    ]
+  const cfg = config.value
+  if (cfg.layout === 'portrait') {
+    const yStart = halfStart
+    const height = halfLength
+    const { W, zoneCenter } = cfg
+    if (count === 1) {
+      return [
+        {
+          x: 0,
+          y: yStart,
+          w: W,
+          h: height,
+          cx: W / 2,
+          cy: yStart + height / 2,
+        },
+      ]
+    }
+    if (count === 2) {
+      const lw = zoneCenter
+      const rw = W - zoneCenter
+      return [
+        {
+          x: 0,
+          y: yStart,
+          w: lw,
+          h: height,
+          cx: lw / 2,
+          cy: yStart + height / 2,
+        },
+        {
+          x: lw,
+          y: yStart,
+          w: rw,
+          h: height,
+          cx: lw + rw / 2,
+          cy: yStart + height / 2,
+        },
+      ]
+    }
+    const zw = W / 3
+    return [0, 1, 2].map((col) => ({
+      x: col * zw,
+      y: yStart,
+      w: zw,
+      h: height,
+      cx: col * zw + zw / 2,
+      cy: yStart + height / 2,
+    }))
+  } else {
+    const xStart = halfStart
+    const width = halfLength
+    const { H, zoneCenter } = cfg
+    if (count === 1) {
+      return [
+        { x: xStart, y: 0, w: width, h: H, cx: xStart + width / 2, cy: H / 2 },
+      ]
+    }
+    if (count === 2) {
+      const th = zoneCenter
+      const bh = H - zoneCenter
+      return [
+        {
+          x: xStart,
+          y: 0,
+          w: width,
+          h: th,
+          cx: xStart + width / 2,
+          cy: th / 2,
+        },
+        {
+          x: xStart,
+          y: th,
+          w: width,
+          h: bh,
+          cx: xStart + width / 2,
+          cy: th + bh / 2,
+        },
+      ]
+    }
+    const zh = H / 3
+    return [0, 1, 2].map((row) => ({
+      x: xStart,
+      y: row * zh,
+      w: width,
+      h: zh,
+      cx: xStart + width / 2,
+      cy: row * zh + zh / 2,
+    }))
   }
-  if (count === 2) {
-    const lw = CENTER_X
-    const rw = W - CENTER_X
-    return [
-      {
-        x: 0,
-        y: yStart,
-        w: lw,
-        h: height,
-        cx: lw / 2,
-        cy: yStart + height / 2,
-      },
-      {
-        x: lw,
-        y: yStart,
-        w: rw,
-        h: height,
-        cx: lw + rw / 2,
-        cy: yStart + height / 2,
-      },
-    ]
-  }
-  // 3 zones — split into thirds
-  const zw = W / 3
-  return [0, 1, 2].map((col) => ({
-    x: col * zw,
-    y: yStart,
-    w: zw,
-    h: height,
-    cx: col * zw + zw / 2,
-    cy: yStart + height / 2,
-  }))
 }
 
-const topH = DIVIDER_Y // 0 → 36
-const botH = H - DIVIDER_Y // 36 → 71.9
+// Top half = left half for landscape
+const topHalfLength = computed(() => config.value.dividerPos)
+// Bottom half = right half for landscape; its start = dividerPos
+const botHalfStart = computed(() => config.value.dividerPos)
+const botHalfLength = computed(() => {
+  const cfg = config.value
+  return cfg.layout === 'portrait'
+    ? cfg.H - cfg.dividerPos
+    : cfg.W - cfg.dividerPos
+})
 
-const topZoneList = computed(() => computeHalfZones(props.topZones, 0, topH))
-const botZoneList = computed(() =>
-  computeHalfZones(props.botZones, DIVIDER_Y, botH),
+const topZoneList = computed(() =>
+  computeHalfZones(props.topZones, 0, topHalfLength.value),
 )
+const botZoneList = computed(() =>
+  computeHalfZones(props.botZones, botHalfStart.value, botHalfLength.value),
+)
+
+// ── Sub-divider positions ─────────────────────────────────────────────────────
+
+/**
+ * Portrait:  returns X positions for vertical lines spanning the given half.
+ * Landscape: returns Y positions for horizontal lines spanning the given half.
+ */
+function halfSubDividers(count: ZoneCount): number[] {
+  const cfg = config.value
+  if (count === 1) return []
+  if (cfg.layout === 'portrait') {
+    return count === 2 ? [cfg.zoneCenter] : [cfg.W / 3, (cfg.W / 3) * 2]
+  } else {
+    return count === 2 ? [cfg.zoneCenter] : [cfg.H / 3, (cfg.H / 3) * 2]
+  }
+}
+
+const topSubDividers = computed(() => halfSubDividers(props.topZones))
+const botSubDividers = computed(() => halfSubDividers(props.botZones))
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
- * cy for the indicator in a zone
- * @param zone - The zone geometry
- * @param half - 'top' or 'bottom' half of the button
- * @param position - 'inner' (near divider) or 'outer' (near edge)
+ * Returns the {cx, cy} centre of an indicator for a zone.
+ *
+ * Portrait:  indicator moves along Y (near top or bottom edge of zone),
+ *            centred on zone X.
+ * Landscape: indicator moves along X (near left or right edge of zone),
+ *            centred on zone Y.
+ *
+ * 'inner' means towards the centre divider; 'outer' means towards the
+ * outer button edge.
  */
-function indicatorCY(
+function indicatorPos(
   zone: Zone,
   half: 'top' | 'bottom',
   position: 'inner' | 'outer',
-): number {
-  // Inner = towards the horizontal divider, Outer = towards the button edge
-  const atBottom =
-    (half === 'top' && position === 'inner') ||
-    (half === 'bottom' && position === 'outer')
-  if (atBottom) {
-    return zone.y + zone.h - INDICATOR_MARGIN_BOTTOM
+): { cx: number; cy: number } {
+  const cfg = config.value
+  if (cfg.layout === 'portrait') {
+    const atBottom =
+      (half === 'top' && position === 'inner') ||
+      (half === 'bottom' && position === 'outer')
+    return {
+      cx: zone.cx,
+      cy: atBottom
+        ? zone.y + zone.h - INDICATOR_MARGIN
+        : zone.y + INDICATOR_MARGIN,
+    }
   } else {
-    return zone.y + INDICATOR_MARGIN_BOTTOM
+    // Landscape: 'top' half = left half, inner = towards centre (right side)
+    const atRight =
+      (half === 'top' && position === 'inner') ||
+      (half === 'bottom' && position === 'outer')
+    return {
+      cx: atRight
+        ? zone.x + zone.w - INDICATOR_MARGIN
+        : zone.x + INDICATOR_MARGIN,
+      cy: zone.cy,
+    }
   }
 }
 
-/** SVG transform to center a 24×24 MDI icon path at (cx, cy) scaled to given size (mm) */
+/**
+ * Returns the two dot positions for a double-dot indicator.
+ * Offset axis matches the button orientation so the dots sit side-by-side
+ * along the same edge as a single dot would.
+ */
+function doubleDotPositions(
+  zone: Zone,
+  half: 'top' | 'bottom',
+  position: 'inner' | 'outer',
+): [{ cx: number; cy: number }, { cx: number; cy: number }] {
+  const { cx, cy } = indicatorPos(zone, half, position)
+  if (config.value.layout === 'portrait') {
+    return [
+      { cx: cx - DOT_R * 2, cy },
+      { cx: cx + DOT_R * 2, cy },
+    ]
+  } else {
+    return [
+      { cx, cy: cy - DOT_R * 2 },
+      { cx, cy: cy + DOT_R * 2 },
+    ]
+  }
+}
+
+/**
+ * Returns x/y/width/height for the dash indicator rect.
+ * In portrait the dash is horizontal; in landscape it is rotated 90° (vertical).
+ */
+function dashRect(
+  zone: Zone,
+  half: 'top' | 'bottom',
+  position: 'inner' | 'outer',
+): { x: number; y: number; width: number; height: number } {
+  const { cx, cy } = indicatorPos(zone, half, position)
+  if (config.value.layout === 'portrait') {
+    return {
+      x: cx - DASH_W / 2,
+      y: cy - DASH_H / 2,
+      width: DASH_W,
+      height: DASH_H,
+    }
+  } else {
+    return {
+      x: cx - DASH_H / 2,
+      y: cy - DASH_W / 2,
+      width: DASH_H,
+      height: DASH_W,
+    }
+  }
+}
+
+/** SVG transform to centre a 24×24 MDI icon path at (cx, cy) scaled to given size (mm) */
 function iconTransform(
   cx: number,
   cy: number,
@@ -244,16 +437,6 @@ function iconTransform(
   const rot = rotation ?? 0
   return `translate(${tx},${ty}) scale(${s}) rotate(${rot},12,12)`
 }
-
-/** Vertical divider X positions for a given zone count */
-function vertDividers(count: ZoneCount): number[] {
-  if (count === 1) return []
-  if (count === 2) return [CENTER_X]
-  return [W / 3, (W / 3) * 2]
-}
-
-const topDividers = computed(() => vertDividers(props.topZones))
-const botDividers = computed(() => vertDividers(props.botZones))
 
 // ── Label layout helpers ──────────────────────────────────────────────────────
 
@@ -329,65 +512,103 @@ function computeLabelY(zone: Zone, cfg: ZoneConfig): number {
 
 <template>
   <svg
-    :viewBox="`0 0 ${W} ${H}`"
-    :width="`${W * scale}mm`"
-    :height="`${H * scale}mm`"
+    :viewBox="`0 0 ${config.W} ${config.H}`"
+    :width="`${config.W * scale}mm`"
+    :height="`${config.H * scale}mm`"
     xmlns="http://www.w3.org/2000/svg"
     overflow="visible"
   >
     <defs>
-      <!-- Clip to the physical button outline -->
       <clipPath :id="clipId">
-        <path :d="OUTLINE_PATH" />
+        <path :d="config.outlinePath" />
       </clipPath>
     </defs>
 
-    <!-- Background fill clipped to outline shape -->
+    <!-- Button outline + background -->
     <path
-      :d="OUTLINE_PATH"
+      :d="config.outlinePath"
       :fill="fillColor"
       :stroke="strokeColor"
       stroke-width="0.1"
       stroke-dasharray="0.1, 0.6"
     />
 
-    <!-- Content group clipped to outline -->
     <g :clip-path="`url(#${clipId})`">
 
-      <!-- Horizontal divider -->
+      <!-- ── Centre divider ─────────────────────────────────────── -->
+      <!-- Portrait: horizontal line -->
       <line
-        x1="0" :y1="DIVIDER_Y"
-        :x2="W" :y2="DIVIDER_Y"
+        v-if="config.layout === 'portrait'"
+        x1="0" :y1="config.dividerPos"
+        :x2="config.W" :y2="config.dividerPos"
+        :stroke="horizontalSeparator?.color ?? strokeColor"
+        :stroke-width="horizontalSeparator?.thickness ?? 0.3"
+        :stroke-dasharray="getDashArray(horizontalSeparator?.style, horizontalSeparator?.thickness ?? 0.3)"
+      />
+      <!-- Landscape: vertical line -->
+      <line
+        v-else
+        :x1="config.dividerPos" y1="0"
+        :x2="config.dividerPos" :y2="config.H"
         :stroke="horizontalSeparator?.color ?? strokeColor"
         :stroke-width="horizontalSeparator?.thickness ?? 0.3"
         :stroke-dasharray="getDashArray(horizontalSeparator?.style, horizontalSeparator?.thickness ?? 0.3)"
       />
 
-      <!-- Top-half vertical dividers (span top half only) -->
-      <line
-        v-for="vx in topDividers"
-        :key="`top-vdiv-${vx}`"
-        :x1="vx" y1="0"
-        :x2="vx" :y2="DIVIDER_Y"
-        :stroke="verticalSeparator?.color ?? strokeColor"
-        :stroke-width="verticalSeparator?.thickness ?? 0.3"
-        :stroke-dasharray="getDashArray(verticalSeparator?.style, verticalSeparator?.thickness ?? 0.3)"
-      />
+      <!-- ── Top/left-half zone sub-dividers ───────────────────── -->
+      <template v-if="config.layout === 'portrait'">
+        <!-- Vertical lines spanning the top half -->
+        <line
+          v-for="vx in topSubDividers"
+          :key="`top-vdiv-${vx}`"
+          :x1="vx" y1="0"
+          :x2="vx" :y2="config.dividerPos"
+          :stroke="verticalSeparator?.color ?? strokeColor"
+          :stroke-width="verticalSeparator?.thickness ?? 0.3"
+          :stroke-dasharray="getDashArray(verticalSeparator?.style, verticalSeparator?.thickness ?? 0.3)"
+        />
+      </template>
+      <template v-else>
+        <!-- Horizontal lines spanning the left half -->
+        <line
+          v-for="hy in topSubDividers"
+          :key="`top-hdiv-${hy}`"
+          x1="0" :y1="hy"
+          :x2="config.dividerPos" :y2="hy"
+          :stroke="verticalSeparator?.color ?? strokeColor"
+          :stroke-width="verticalSeparator?.thickness ?? 0.3"
+          :stroke-dasharray="getDashArray(verticalSeparator?.style, verticalSeparator?.thickness ?? 0.3)"
+        />
+      </template>
 
-      <!-- Bottom-half vertical dividers (span bottom half only) -->
-      <line
-        v-for="vx in botDividers"
-        :key="`bot-vdiv-${vx}`"
-        :x1="vx" :y1="DIVIDER_Y"
-        :x2="vx" :y2="H"
-        :stroke="verticalSeparator?.color ?? strokeColor"
-        :stroke-width="verticalSeparator?.thickness ?? 0.3"
-        :stroke-dasharray="getDashArray(verticalSeparator?.style, verticalSeparator?.thickness ?? 0.3)"
-      />
+      <!-- ── Bottom/right-half zone sub-dividers ───────────────── -->
+      <template v-if="config.layout === 'portrait'">
+        <!-- Vertical lines spanning the bottom half -->
+        <line
+          v-for="vx in botSubDividers"
+          :key="`bot-vdiv-${vx}`"
+          :x1="vx" :y1="config.dividerPos"
+          :x2="vx" :y2="config.H"
+          :stroke="verticalSeparator?.color ?? strokeColor"
+          :stroke-width="verticalSeparator?.thickness ?? 0.3"
+          :stroke-dasharray="getDashArray(verticalSeparator?.style, verticalSeparator?.thickness ?? 0.3)"
+        />
+      </template>
+      <template v-else>
+        <!-- Horizontal lines spanning the right half -->
+        <line
+          v-for="hy in botSubDividers"
+          :key="`bot-hdiv-${hy}`"
+          :x1="config.dividerPos" :y1="hy"
+          :x2="config.W" :y2="hy"
+          :stroke="verticalSeparator?.color ?? strokeColor"
+          :stroke-width="verticalSeparator?.thickness ?? 0.3"
+          :stroke-dasharray="getDashArray(verticalSeparator?.style, verticalSeparator?.thickness ?? 0.3)"
+        />
+      </template>
 
-      <!-- Top-half zones: icon + label + indicator -->
+      <!-- ── Top/left-half zones ───────────────────────────────── -->
       <g v-for="(zone, i) in topZoneList" :key="`top-${i}`">
-        <!-- MDI Icon: position computed via iconRenderCenter so the shift is in the rotated frame without spinning the icon visually -->
         <g
           v-if="topZoneConfig[i]?.icon"
           :transform="iconTransform(iconRenderCenter(zone, topZoneConfig[i])[0], iconRenderCenter(zone, topZoneConfig[i])[1], topZoneConfig[i].iconSize, topZoneConfig[i].iconRotation)"
@@ -396,7 +617,6 @@ function computeLabelY(zone: Zone, cfg: ZoneConfig): number {
           <path :d="topZoneConfig[i].icon" />
         </g>
 
-        <!-- Label text -->
         <text
           v-if="topZoneConfig[i]?.label"
           :x="zone.cx"
@@ -410,47 +630,38 @@ function computeLabelY(zone: Zone, cfg: ZoneConfig): number {
             : undefined"
         >{{ topZoneConfig[i].label }}</text>
 
-        <!-- Indicator: dot -->
         <circle
           v-if="topZoneConfig[i]?.indicator === 'dot'"
-          :cx="zone.cx"
-          :cy="indicatorCY(zone, 'top', topIndicatorPos)"
+          :cx="indicatorPos(zone, 'top', topIndicatorPos).cx"
+          :cy="indicatorPos(zone, 'top', topIndicatorPos).cy"
           :r="DOT_R"
           :fill="iconColor"
         />
-
-        <!-- Indicator: double-dot -->
         <g v-else-if="topZoneConfig[i]?.indicator === 'double-dot'">
           <circle
-            :cx="zone.cx - DOT_R * 2"
-            :cy="indicatorCY(zone, 'top', topIndicatorPos)"
-            :r="DOT_R"
-            :fill="iconColor"
+            :cx="doubleDotPositions(zone, 'top', topIndicatorPos)[0].cx"
+            :cy="doubleDotPositions(zone, 'top', topIndicatorPos)[0].cy"
+            :r="DOT_R" :fill="iconColor"
           />
           <circle
-            :cx="zone.cx + DOT_R * 2"
-            :cy="indicatorCY(zone, 'top', topIndicatorPos)"
-            :r="DOT_R"
-            :fill="iconColor"
+            :cx="doubleDotPositions(zone, 'top', topIndicatorPos)[1].cx"
+            :cy="doubleDotPositions(zone, 'top', topIndicatorPos)[1].cy"
+            :r="DOT_R" :fill="iconColor"
           />
         </g>
-
-        <!-- Indicator: dash -->
         <rect
           v-else-if="topZoneConfig[i]?.indicator === 'dash'"
-          :x="zone.cx - DASH_W / 2"
-          :y="indicatorCY(zone, 'top', topIndicatorPos) - DASH_H / 2"
-          :width="DASH_W"
-          :height="DASH_H"
-          :rx="DASH_R"
-          :ry="DASH_R"
+          :x="dashRect(zone, 'top', topIndicatorPos).x"
+          :y="dashRect(zone, 'top', topIndicatorPos).y"
+          :width="dashRect(zone, 'top', topIndicatorPos).width"
+          :height="dashRect(zone, 'top', topIndicatorPos).height"
+          :rx="DASH_R" :ry="DASH_R"
           :fill="iconColor"
         />
       </g>
 
-      <!-- Bottom-half zones: icon + label + indicator -->
+      <!-- ── Bottom/right-half zones ───────────────────────────── -->
       <g v-for="(zone, i) in botZoneList" :key="`bot-${i}`">
-        <!-- MDI Icon: position computed via iconRenderCenter so the shift is in the rotated frame without spinning the icon visually -->
         <g
           v-if="botZoneConfig[i]?.icon"
           :transform="iconTransform(iconRenderCenter(zone, botZoneConfig[i])[0], iconRenderCenter(zone, botZoneConfig[i])[1], botZoneConfig[i].iconSize, botZoneConfig[i].iconRotation)"
@@ -459,7 +670,6 @@ function computeLabelY(zone: Zone, cfg: ZoneConfig): number {
           <path :d="botZoneConfig[i].icon" />
         </g>
 
-        <!-- Label text -->
         <text
           v-if="botZoneConfig[i]?.label"
           :x="zone.cx"
@@ -473,40 +683,32 @@ function computeLabelY(zone: Zone, cfg: ZoneConfig): number {
             : undefined"
         >{{ botZoneConfig[i].label }}</text>
 
-        <!-- Indicator: dot -->
         <circle
           v-if="botZoneConfig[i]?.indicator === 'dot'"
-          :cx="zone.cx"
-          :cy="indicatorCY(zone, 'bottom', botIndicatorPos)"
+          :cx="indicatorPos(zone, 'bottom', botIndicatorPos).cx"
+          :cy="indicatorPos(zone, 'bottom', botIndicatorPos).cy"
           :r="DOT_R"
           :fill="iconColor"
         />
-
-        <!-- Indicator: double-dot -->
         <g v-else-if="botZoneConfig[i]?.indicator === 'double-dot'">
           <circle
-            :cx="zone.cx - DOT_R * 2"
-            :cy="indicatorCY(zone, 'bottom', botIndicatorPos)"
-            :r="DOT_R"
-            :fill="iconColor"
+            :cx="doubleDotPositions(zone, 'bottom', botIndicatorPos)[0].cx"
+            :cy="doubleDotPositions(zone, 'bottom', botIndicatorPos)[0].cy"
+            :r="DOT_R" :fill="iconColor"
           />
           <circle
-            :cx="zone.cx + DOT_R * 2"
-            :cy="indicatorCY(zone, 'bottom', botIndicatorPos)"
-            :r="DOT_R"
-            :fill="iconColor"
+            :cx="doubleDotPositions(zone, 'bottom', botIndicatorPos)[1].cx"
+            :cy="doubleDotPositions(zone, 'bottom', botIndicatorPos)[1].cy"
+            :r="DOT_R" :fill="iconColor"
           />
         </g>
-
-        <!-- Indicator: dash -->
         <rect
           v-else-if="botZoneConfig[i]?.indicator === 'dash'"
-          :x="zone.cx - DASH_W / 2"
-          :y="indicatorCY(zone, 'bottom', botIndicatorPos) - DASH_H / 2"
-          :width="DASH_W"
-          :height="DASH_H"
-          :rx="DASH_R"
-          :ry="DASH_R"
+          :x="dashRect(zone, 'bottom', botIndicatorPos).x"
+          :y="dashRect(zone, 'bottom', botIndicatorPos).y"
+          :width="dashRect(zone, 'bottom', botIndicatorPos).width"
+          :height="dashRect(zone, 'bottom', botIndicatorPos).height"
+          :rx="DASH_R" :ry="DASH_R"
           :fill="iconColor"
         />
       </g>
