@@ -9,9 +9,11 @@ export function useSvgDownload() {
     filename = 'button-inlay.svg',
   ) {
     const clone = svgEl.cloneNode(true) as SVGSVGElement
-    // Override dimensions to physical mm — remove the screen scale factor
-    clone.setAttribute('width', '41.2mm')
-    clone.setAttribute('height', '71.9mm')
+    // Derive physical mm dimensions from the viewBox (units are already mm).
+    // This removes the screen scale factor and works for any button type.
+    const vb = svgEl.viewBox.baseVal
+    clone.setAttribute('width', `${vb.width}mm`)
+    clone.setAttribute('height', `${vb.height}mm`)
 
     const svgStr = new XMLSerializer().serializeToString(clone)
     const blob = new Blob([svgStr], { type: 'image/svg+xml' })
