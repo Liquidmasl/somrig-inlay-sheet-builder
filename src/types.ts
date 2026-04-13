@@ -1,6 +1,7 @@
 export type ActionType = 'single' | 'double' | 'hold' | 'none'
 export type IndicatorPosition = 'inner' | 'outer'
 export type LineStyle = 'solid' | 'dashed' | 'dotted'
+export type ButtonType = 'somrig' | 'bilresa'
 
 export interface SeparatorStyle {
   thickness: number // stroke-width in mm (e.g., 0.3)
@@ -39,5 +40,6 @@ export interface ButtonInlay {
 export interface Sheet {
   id: string
   name: string
+  buttonType: ButtonType
   buttons: ButtonInlay[] // grid of buttons to print
 }
