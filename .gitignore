@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# vue-tsc (project references / composite mode) emits .js alongside sources
+src/**/*.js
+
 # Playwright
 playwright-report/
 test-results/
