@@ -15,6 +15,7 @@ import ButtonInlaySVG, {
 } from './components/ButtonInlaySVG.vue'
 import { useDarkMode } from './composables/useDarkMode'
 import { useSheets } from './composables/useSheets'
+import { useSvgDownload } from './composables/useSvgDownload'
 import type { ActionType, ActionZone } from './types'
 
 const { init } = useDarkMode()
@@ -164,6 +165,25 @@ function handleAddButton() {
 function handlePrint() {
   window.print()
 }
+
+const { downloadButtonSvg } = useSvgDownload()
+
+// DOM element refs for desktop grid cards, keyed by button ID.
+// Used to locate the <svg> element for SVG download (desktop cards are always
+// in the DOM even on mobile, so this works regardless of viewport size).
+const cardRefs: Record<string, Element> = {}
+
+function downloadActiveSvg() {
+  if (!activeButtonId.value) return
+  const card = cardRefs[activeButtonId.value]
+  if (!card) return
+  const svg = card.querySelector('svg')
+  if (!svg) return
+  downloadButtonSvg(
+    svg as SVGSVGElement,
+    `button-inlay-${activeButtonIndex.value + 1}.svg`,
+  )
+}
 </script>
 
 <template>
@@ -196,6 +216,17 @@ function handlePrint() {
               <path :d="mdiDownload" />
             </svg>
             <span>Download PDF</span>
+          </button>
+          <button
+            @click="downloadActiveSvg"
+            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+            aria-label="Download active button as SVG"
+            title="Download SVG (physical mm dimensions, suitable for 3D printing / laser cutting)"
+          >
+            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
+              <path :d="mdiDownload" />
+            </svg>
+            <span>Download SVG</span>
           </button>
         </div>
 
@@ -293,6 +324,7 @@ function handlePrint() {
           <button
             v-for="btn in activeSheet?.buttons"
             :key="btn.id"
+            :ref="(el) => { if (el) cardRefs[btn.id] = el as Element; else delete cardRefs[btn.id] }"
             class="relative rounded-xl p-2 transition-all focus:outline-none bg-white dark:bg-gray-900"
             :class="
               activeButtonId === btn.id
