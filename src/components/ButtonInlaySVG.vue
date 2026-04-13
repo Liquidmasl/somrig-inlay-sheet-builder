@@ -142,9 +142,11 @@ const SOMRIG_OUTLINE =
   'C 0.09 35.97 0.37 17.51 1.22 11.66 C 2.06 5.81 3.94 4.32 6.02 2.67 ' +
   'C 8.11 1.03 10.45 0.74 10.45 0.74 C 10.45 0.74 13.26 0.09 20.59 0.09 Z'
 
-// Stadium outline: W=63.3, H=36.3, r=18.15 (= H/2 — fully rounded ends)
+// Vertical stadium outline: W=36.3, H=63.3, r=18.15 (= W/2 — fully rounded top/bottom)
+// Top arc:    (0,18.15) → (36.3,18.15) sweep=1 clockwise → bulges upward    ✓
+// Bottom arc: (36.3,45.15) → (0,45.15) sweep=1 clockwise → bulges downward  ✓
 const BILRESA_OUTLINE =
-  'M 18.15 0 L 45.15 0 A 18.15 18.15 0 0 1 45.15 36.3 L 18.15 36.3 A 18.15 18.15 0 0 0 18.15 0 Z'
+  'M 0 18.15 A 18.15 18.15 0 0 1 36.3 18.15 L 36.3 45.15 A 18.15 18.15 0 0 1 0 45.15 Z'
 
 const BUTTON_CONFIGS: Record<ButtonType, ButtonConfig> = {
   somrig: {
@@ -156,12 +158,12 @@ const BUTTON_CONFIGS: Record<ButtonType, ButtonConfig> = {
     zoneCenter: 20.2,
   },
   bilresa: {
-    W: 63.3,
-    H: 36.3,
+    W: 36.3,
+    H: 63.3,
     outlinePath: BILRESA_OUTLINE,
-    layout: 'landscape',
-    dividerPos: 31.65, // W / 2
-    zoneCenter: 18.15, // H / 2
+    layout: 'portrait',
+    dividerPos: 31.65, // H / 2
+    zoneCenter: 18.15, // W / 2
   },
 }
 
