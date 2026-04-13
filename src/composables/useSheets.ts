@@ -3,6 +3,7 @@ import type {
   ActionType,
   ActionZone,
   ButtonInlay,
+  ButtonType,
   IndicatorPosition,
   SeparatorStyle,
   Sheet,
@@ -36,10 +37,15 @@ function createDefaultButtonInlay(id: string): ButtonInlay {
   }
 }
 
-function createDefaultSheet(id: string, name: string): Sheet {
+function createDefaultSheet(
+  id: string,
+  name: string,
+  buttonType: ButtonType = 'somrig',
+): Sheet {
   return {
     id,
     name,
+    buttonType,
     buttons: [createDefaultButtonInlay(`${id}-btn-1`)],
   }
 }
@@ -168,6 +174,12 @@ export function useSheets() {
     Object.assign(separator, patch)
   }
 
+  function setButtonType(sheetId: string, buttonType: ButtonType): void {
+    const sheet = sheets.value.find((s) => s.id === sheetId)
+    if (!sheet) return
+    sheet.buttonType = buttonType
+  }
+
   return {
     sheets,
     activeSheetId,
@@ -182,5 +194,6 @@ export function useSheets() {
     updateZone,
     setIndicatorPosition,
     updateSeparator,
+    setButtonType,
   }
 }
