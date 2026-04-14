@@ -1,7 +1,7 @@
 /**
  * use3mfDownload — generates a 3MF file containing:
  *   Object 1: physical button plate (parsed from a binary STL shipped in public/models/)
- *   Object 2: extruded icon / indicator / label layer (0.4 mm above the face at Z=0)
+ *   Object 2: extruded icon / indicator / label layer embedded into the face at Z=0
  *
  * Coordinate conventions
  * ─────────────────────
@@ -10,22 +10,24 @@
  *
  *   Mapping: worldX = svgX − W/2
  *            worldY = H/2 − svgY   (Y flip)
- *            worldZ = 0..+EXTRUDE_H (icon layer sits on top of face)
+ *            worldZ = -EXTRUDE_H..0 (icon layer embedded into face, flush at Z=0)
  *
- * Multi-colour printing
- * ────────────────────
- *   In Bambu Studio, import the 3MF and assign a different filament to each object.
- *   The two meshes touch at Z=0; the slicer resolves the colour boundary.
+ * Multi-colour printing (Bambu Studio)
+ * ─────────────────────────────────────
+ *   Import the 3MF, assign a different filament to each object.
+ *   Both meshes share the Z=−EXTRUDE_H..0 region; the slicer assigns colour
+ *   per object so the face surface remains flat with two colours.
  */
 
 import earcut from 'earcut'
 import * as fflate from 'fflate'
 import * as opentype from 'opentype.js'
 
-// Height of the icon extrusion above the face (mm)
+// Depth of the icon extrusion below the face surface (mm)
 const EXTRUDE_H = 0.4
 
 // ── Font (cached singleton) ───────────────────────────────────────────────────
+
 let _fontPromise: Promise<opentype.Font> | null = null
 
 function loadFont(): Promise<opentype.Font> {
@@ -37,17 +39,40 @@ function loadFont(): Promise<opentype.Font> {
   return _fontPromise
 }
 
+// ── Hidden SVG helper for path measurement ────────────────────────────────────
+// getTotalLength / getPointAtLength require an element in the live DOM.
+
+let _helperSvg: SVGSVGElement | null = null
+let _helperPath: SVGPathElement | null = null
+
+function getHelperPath(): SVGPathElement {
+  if (!_helperSvg || !_helperPath) {
+    const ns = 'http://www.w3.org/2000/svg'
+    _helperSvg = document.createElementNS(ns, 'svg') as SVGSVGElement
+    _helperPath = document.createElementNS(ns, 'path') as SVGPathElement
+    _helperSvg.appendChild(_helperPath)
+    Object.assign(_helperSvg.style, {
+      position: 'fixed',
+      top: '0',
+      left: '0',
+      width: '0',
+      height: '0',
+      overflow: 'hidden',
+      pointerEvents: 'none',
+    })
+    document.body.appendChild(_helperSvg)
+  }
+  return _helperPath
+}
+
 // ── Binary STL parser ─────────────────────────────────────────────────────────
-/**
- * Parse a binary STL buffer into a flat vertex array [x,y,z, x,y,z, …]
- * (3 vertices per triangle, no index sharing — triangle soup).
- */
+
 function parseStl(buffer: ArrayBuffer): number[] {
   const view = new DataView(buffer)
   const count = view.getUint32(80, true)
   const verts: number[] = []
   for (let i = 0; i < count; i++) {
-    const base = 84 + i * 50 + 12 // skip 12-byte normal vector
+    const base = 84 + i * 50 + 12 // skip 12-byte normal
     for (let v = 0; v < 3; v++) {
       const b = base + v * 12
       verts.push(
@@ -98,6 +123,7 @@ function rectPolygon(
   ]
 }
 
+/** Rotate ring around (cx, cy) by deg degrees (positive = CCW in standard math). */
 function rotateRing(
   ring: [number, number][],
   deg: number,
@@ -113,8 +139,7 @@ function rotateRing(
   ])
 }
 
-// ── Coordinate mapping ────────────────────────────────────────────────────────
-
+/** Map SVG (Y-down, origin top-left) coords to 3D world (Y-up, origin center). */
 function svgRingToWorld(
   ring: [number, number][],
   W: number,
@@ -123,14 +148,57 @@ function svgRingToWorld(
   return ring.map(([x, y]) => [x - W / 2, H / 2 - y])
 }
 
+// ── Point-in-polygon (ray cast) ───────────────────────────────────────────────
+
+function pointInPolygon(
+  pt: [number, number],
+  poly: [number, number][],
+): boolean {
+  const [px, py] = pt
+  let inside = false
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i]
+    const [xj, yj] = poly[j]
+    if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) {
+      inside = !inside
+    }
+  }
+  return inside
+}
+
+// ── Group rings into outer+holes shapes ───────────────────────────────────────
+// Sorts by descending area; a ring that is inside a larger ring becomes its hole.
+
+interface Shape {
+  outer: [number, number][]
+  holes: [number, number][][]
+}
+
+function groupRingsIntoShapes(rings: [number, number][][]): Shape[] {
+  if (rings.length === 0) return []
+  if (rings.length === 1) return [{ outer: rings[0], holes: [] }]
+
+  const sorted = [...rings].sort(
+    (a, b) => Math.abs(signedArea(b)) - Math.abs(signedArea(a)),
+  )
+
+  const shapes: Shape[] = []
+  for (const ring of sorted) {
+    let placed = false
+    for (const shape of shapes) {
+      if (pointInPolygon(ring[0], shape.outer)) {
+        shape.holes.push(ring)
+        placed = true
+        break
+      }
+    }
+    if (!placed) shapes.push({ outer: ring, holes: [] })
+  }
+  return shapes
+}
+
 // ── Extrusion ─────────────────────────────────────────────────────────────────
 
-/**
- * Extrude a polygon from z0 to z1.
- * `outer` is the boundary ring (CW or CCW — earcut handles both).
- * `holes` are inner rings.
- * Returns flat triangle vertex array [x,y,z, x,y,z, …].
- */
 function extrudePolygon(
   outer: [number, number][],
   holes: [number, number][][],
@@ -155,27 +223,26 @@ function extrudePolygon(
 
   const tris: number[] = []
 
-  // Top face (z1): flip winding so normal points +Z
+  // Top face (z1) — winding flipped so normal points +Z
   for (let i = 0; i < indices.length; i += 3) {
-    const a = allPts[indices[i]]
-    const b = allPts[indices[i + 1]]
-    const c = allPts[indices[i + 2]]
+    const a = allPts[indices[i]],
+      b = allPts[indices[i + 1]],
+      c = allPts[indices[i + 2]]
     tris.push(a[0], a[1], z1, c[0], c[1], z1, b[0], b[1], z1)
   }
-
-  // Bottom face (z0): normal points −Z
+  // Bottom face (z0) — normal points −Z
   for (let i = 0; i < indices.length; i += 3) {
-    const a = allPts[indices[i]]
-    const b = allPts[indices[i + 1]]
-    const c = allPts[indices[i + 2]]
+    const a = allPts[indices[i]],
+      b = allPts[indices[i + 1]],
+      c = allPts[indices[i + 2]]
     tris.push(a[0], a[1], z0, b[0], b[1], z0, c[0], c[1], z0)
   }
 
   // Side walls
   function walls(ring: [number, number][], outward: boolean) {
     for (let i = 0; i < ring.length; i++) {
-      const a = ring[i]
-      const b = ring[(i + 1) % ring.length]
+      const a = ring[i],
+        b = ring[(i + 1) % ring.length]
       if (outward) {
         tris.push(a[0], a[1], z0, b[0], b[1], z0, b[0], b[1], z1)
         tris.push(a[0], a[1], z0, b[0], b[1], z1, a[0], a[1], z1)
@@ -191,56 +258,75 @@ function extrudePolygon(
   return tris
 }
 
-// ── SVG path sampling ─────────────────────────────────────────────────────────
+// ── SVG path → rings ──────────────────────────────────────────────────────────
 
 /**
- * Sample a <path> element into one or more polygon rings (in SVG mm space).
- * Subpaths are detected by "jump" gaps in the sample sequence.
+ * Split a path `d` string into individual subpath strings (one per M…Z).
+ * Each subpath must start with M/m.
+ */
+function splitSubpaths(d: string): string[] {
+  return d
+    .trim()
+    .split(/(?=[Mm])/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 2)
+}
+
+/**
+ * Sample a subpath `d` string in its LOCAL coordinate space.
+ * Uses a hidden SVG path element so getTotalLength/getPointAtLength work.
+ */
+function sampleSubpathLocal(dSubpath: string): [number, number][] {
+  const hp = getHelperPath()
+  hp.setAttribute('d', dSubpath)
+
+  const totalLen = hp.getTotalLength()
+  if (totalLen < 0.01) return []
+
+  // 3 samples per MDI unit (MDI paths are 24×24 units → typical arc length ~50)
+  const n = Math.max(12, Math.ceil(totalLen * 3))
+  const pts: [number, number][] = []
+  for (let i = 0; i < n; i++) {
+    const p = hp.getPointAtLength((i / n) * totalLen)
+    pts.push([p.x, p.y])
+  }
+  return pts
+}
+
+/**
+ * Sample a <path> element into polygon rings in SVG mm space.
+ *
+ * Key fix: the correct matrix to go from path-local → SVG-mm is
+ *   svgCTM⁻¹ · pathCTM   (NOT pathCTM · svgCTM⁻¹)
+ *
+ * Each M…Z subpath is sampled individually via a hidden helper element,
+ * so gaps between subpaths can never be misidentified as intra-path jumps.
  */
 function samplePathRings(
   pathEl: SVGPathElement,
   svgEl: SVGSVGElement,
 ): [number, number][][] {
-  const totalLen = pathEl.getTotalLength()
-  if (totalLen < 0.5) return []
+  const d = pathEl.getAttribute('d')
+  if (!d) return []
 
   const pathCTM = pathEl.getScreenCTM()
   const svgCTM = svgEl.getScreenCTM()
   if (!pathCTM || !svgCTM) return []
-  const transform = pathCTM.multiply(svgCTM.inverse())
 
-  const samplesPerUnit = 6
-  const n = Math.max(16, Math.ceil(totalLen * samplesPerUnit))
-  const svgPt = svgEl.createSVGPoint()
-
-  const samples: [number, number][] = []
-  for (let i = 0; i <= n; i++) {
-    const p = pathEl.getPointAtLength((i / n) * totalLen)
-    svgPt.x = p.x
-    svgPt.y = p.y
-    const mm = svgPt.matrixTransform(transform)
-    samples.push([mm.x, mm.y])
-  }
-
-  // Split into rings at "teleport" gaps (new subpath start)
-  const stepLen = totalLen / n
-  const jumpThreshold = stepLen * 4
+  // svgCTM⁻¹ · pathCTM  maps path-local coords → SVG user-space (mm)
+  const transform = svgCTM.inverse().multiply(pathCTM)
 
   const rings: [number, number][][] = []
-  let current: [number, number][] = [samples[0]]
+  for (const sub of splitSubpaths(d)) {
+    const localPts = sampleSubpathLocal(sub)
+    if (localPts.length < 4) continue
 
-  for (let i = 1; i < samples.length; i++) {
-    const dx = samples[i][0] - samples[i - 1][0]
-    const dy = samples[i][1] - samples[i - 1][1]
-    if (Math.sqrt(dx * dx + dy * dy) > jumpThreshold) {
-      if (current.length > 3) rings.push(current)
-      current = [samples[i]]
-    } else {
-      current.push(samples[i])
-    }
+    const mmPts: [number, number][] = localPts.map(([x, y]) => {
+      const pt = new DOMPoint(x, y).matrixTransform(transform)
+      return [pt.x, pt.y]
+    })
+    rings.push(mmPts)
   }
-  if (current.length > 3) rings.push(current)
-
   return rings
 }
 
@@ -264,12 +350,11 @@ function bezierQuad(p0: number, p1: number, p2: number, t: number): number {
   return u * u * p0 + 2 * u * t * p1 + t * t * p2
 }
 
-/** Convert an opentype Path into polygon rings (in the path's coordinate space). */
 function opentypePathToRings(path: opentype.Path): [number, number][][] {
   const rings: [number, number][][] = []
   let current: [number, number][] = []
-  let lastX = 0
-  let lastY = 0
+  let lastX = 0,
+    lastY = 0
 
   for (const cmd of path.commands) {
     switch (cmd.type) {
@@ -280,43 +365,41 @@ function opentypePathToRings(path: opentype.Path): [number, number][][] {
         lastY = cmd.y!
         current.push([lastX, lastY])
         break
-
       case 'L':
         lastX = cmd.x!
         lastY = cmd.y!
         current.push([lastX, lastY])
         break
-
       case 'C': {
-        const steps = 8
         const x0 = lastX,
-          y0 = lastY
+          y0 = lastY,
+          steps = 8
         for (let t = 1; t <= steps; t++) {
           const u = t / steps
-          const nx = bezierCubic(x0, cmd.x1!, cmd.x2!, cmd.x!, u)
-          const ny = bezierCubic(y0, cmd.y1!, cmd.y2!, cmd.y!, u)
-          current.push([nx, ny])
+          current.push([
+            bezierCubic(x0, cmd.x1!, cmd.x2!, cmd.x!, u),
+            bezierCubic(y0, cmd.y1!, cmd.y2!, cmd.y!, u),
+          ])
         }
         lastX = cmd.x!
         lastY = cmd.y!
         break
       }
-
       case 'Q': {
-        const steps = 6
         const x0 = lastX,
-          y0 = lastY
+          y0 = lastY,
+          steps = 6
         for (let t = 1; t <= steps; t++) {
           const u = t / steps
-          const nx = bezierQuad(x0, cmd.x1!, cmd.x!, u)
-          const ny = bezierQuad(y0, cmd.y1!, cmd.y!, u)
-          current.push([nx, ny])
+          current.push([
+            bezierQuad(x0, cmd.x1!, cmd.x!, u),
+            bezierQuad(y0, cmd.y1!, cmd.y!, u),
+          ])
         }
         lastX = cmd.x!
         lastY = cmd.y!
         break
       }
-
       case 'Z':
         if (current.length > 3) rings.push(current)
         current = []
@@ -330,10 +413,10 @@ function opentypePathToRings(path: opentype.Path): [number, number][][] {
 // ── Parse SVG transform="rotate(deg,cx,cy)" ──────────────────────────────────
 
 function parseRotateTransform(
-  transform: string | null,
+  attr: string | null,
 ): { deg: number; cx: number; cy: number } | null {
-  if (!transform) return null
-  const m = transform.match(
+  if (!attr) return null
+  const m = attr.match(
     /rotate\(\s*([^,)]+)(?:\s*,\s*([^,)]+)\s*,\s*([^,)]+))?\s*\)/,
   )
   if (!m) return null
@@ -344,34 +427,28 @@ function parseRotateTransform(
   }
 }
 
-// ── Collect icon layer geometry from DOM ──────────────────────────────────────
+// ── Collect icon-layer geometry from the SVG DOM ──────────────────────────────
 
 function collectIconTris(svgEl: SVGSVGElement, font: opentype.Font): number[] {
   const vb = svgEl.viewBox.baseVal
   const W = vb.width
   const H = vb.height
-  const Z0 = 0
-  const Z1 = EXTRUDE_H
+
+  // Icons are embedded INTO the face (face at Z=0, plate at Z<0).
+  // Z0..Z1 overlaps the top EXTRUDE_H mm of the plate → Bambu assigns colour per object.
+  const Z0 = -EXTRUDE_H
+  const Z1 = 0
 
   const tris: number[] = []
 
-  function addRings(rings: [number, number][][]) {
-    if (rings.length === 0) return
-
-    // Largest area ring is the outer contour; others are holes
-    const areas = rings.map((r) => Math.abs(signedArea(r)))
-    let outerIdx = 0
-    for (let i = 1; i < rings.length; i++) {
-      if (areas[i] > areas[outerIdx]) outerIdx = i
+  /** Convert SVG-space rings to world space, group into outer+holes, extrude. */
+  function processRings(svgRings: [number, number][][]) {
+    if (svgRings.length === 0) return
+    const worldRings = svgRings.map((r) => svgRingToWorld(r, W, H))
+    const shapes = groupRingsIntoShapes(worldRings)
+    for (const { outer, holes } of shapes) {
+      tris.push(...extrudePolygon(outer, holes, Z0, Z1))
     }
-
-    const outer = svgRingToWorld(rings[outerIdx], W, H)
-    const holes = rings
-      .filter((_, i) => i !== outerIdx)
-      .map((r) => svgRingToWorld(r, W, H))
-
-    const extruded = extrudePolygon(outer, holes, Z0, Z1)
-    tris.push(...extruded)
   }
 
   // ── MDI icon <path> elements (inside transformed <g>) ──────────────────────
@@ -379,8 +456,7 @@ function collectIconTris(svgEl: SVGSVGElement, font: opentype.Font): number[] {
     'g[clip-path] g[transform] > path',
   )
   for (const pathEl of iconPaths) {
-    const rings = samplePathRings(pathEl, svgEl)
-    addRings(rings)
+    processRings(samplePathRings(pathEl, svgEl))
   }
 
   // ── Dot / double-dot indicators (<circle>) ──────────────────────────────────
@@ -391,8 +467,7 @@ function collectIconTris(svgEl: SVGSVGElement, font: opentype.Font): number[] {
     const cx = parseFloat(circ.getAttribute('cx') ?? '0')
     const cy = parseFloat(circ.getAttribute('cy') ?? '0')
     const r = parseFloat(circ.getAttribute('r') ?? '0')
-    const poly = svgRingToWorld(circlePolygon(cx, cy, r, 20), W, H)
-    tris.push(...extrudePolygon(poly, [], Z0, Z1))
+    processRings([circlePolygon(cx, cy, r, 20)])
   }
 
   // ── Dash indicators (<rect>) ────────────────────────────────────────────────
@@ -402,8 +477,7 @@ function collectIconTris(svgEl: SVGSVGElement, font: opentype.Font): number[] {
     const y = parseFloat(rect.getAttribute('y') ?? '0')
     const w = parseFloat(rect.getAttribute('width') ?? '0')
     const h = parseFloat(rect.getAttribute('height') ?? '0')
-    const poly = svgRingToWorld(rectPolygon(x, y, w, h), W, H)
-    tris.push(...extrudePolygon(poly, [], Z0, Z1))
+    processRings([rectPolygon(x, y, w, h)])
   }
 
   // ── Text labels (<text>) ────────────────────────────────────────────────────
@@ -415,28 +489,39 @@ function collectIconTris(svgEl: SVGSVGElement, font: opentype.Font): number[] {
     const cx = parseFloat(textEl.getAttribute('x') ?? '0')
     const cy = parseFloat(textEl.getAttribute('y') ?? '0')
     const fontSize = parseFloat(textEl.getAttribute('font-size') ?? '3')
-    const transformAttr = textEl.getAttribute('transform')
-    const rot = parseRotateTransform(transformAttr)
+    const rot = parseRotateTransform(textEl.getAttribute('transform'))
 
-    // Measure the glyph bounding box to center it at (cx, cy)
+    // Measure bbox at origin to get centering offsets
     const tmpPath = font.getPath(content, 0, 0, fontSize)
     const bb = tmpPath.getBoundingBox()
-    if (bb.x1 === bb.x2 || bb.y1 === bb.y2) continue
+    if (bb.x2 <= bb.x1 || bb.y2 <= bb.y1) continue
 
-    const startX = cx - (bb.x1 + bb.x2) / 2
-    const startY = cy - (bb.y1 + bb.y2) / 2
+    // Render centered at (cx, cy) — matching SVG text-anchor:middle + dominant-baseline:central
+    const glyphPath = font.getPath(
+      content,
+      cx - (bb.x1 + bb.x2) / 2,
+      cy - (bb.y1 + bb.y2) / 2,
+      fontSize,
+    )
+    const svgRings = opentypePathToRings(glyphPath)
+    if (svgRings.length === 0) continue
 
-    const glyphPath = font.getPath(content, startX, startY, fontSize)
-    const rings = opentypePathToRings(glyphPath)
+    // Convert to world space
+    let worldRings = svgRings.map((r) => svgRingToWorld(r, W, H))
 
-    for (const ring of rings) {
-      let worldRing = svgRingToWorld(ring, W, H)
-      if (rot) {
-        // Rotation pivot in world space
-        const [pivotX, pivotY] = svgRingToWorld([[rot.cx, rot.cy]], W, H)[0]
-        worldRing = rotateRing(worldRing, rot.deg, pivotX, pivotY)
-      }
-      tris.push(...extrudePolygon(worldRing, [], Z0, Z1))
+    // Apply text rotation in world space.
+    // SVG rotate is CW in Y-down; after Y-flip, same angle becomes CCW (Y-up).
+    // Negate so the printed result matches the SVG preview.
+    if (rot) {
+      const [pivotX, pivotY] = svgRingToWorld([[rot.cx, rot.cy]], W, H)[0]
+      worldRings = worldRings.map((ring) =>
+        rotateRing(ring, -rot.deg, pivotX, pivotY),
+      )
+    }
+
+    const shapes = groupRingsIntoShapes(worldRings)
+    for (const { outer, holes } of shapes) {
+      tris.push(...extrudePolygon(outer, holes, Z0, Z1))
     }
   }
 
@@ -451,7 +536,6 @@ function buildObjectXml(id: number, tris: number[]): string {
   const triCount = tris.length / 9
   let vertsXml = ''
   let trisXml = ''
-
   for (let i = 0; i < triCount; i++) {
     const b = i * 9
     for (let v = 0; v < 3; v++) {
@@ -460,7 +544,6 @@ function buildObjectXml(id: number, tris: number[]): string {
     }
     trisXml += `        <triangle v1="${i * 3}" v2="${i * 3 + 1}" v3="${i * 3 + 2}" />\n`
   }
-
   return `    <object id="${id}" type="model">
       <mesh>
         <vertices>
@@ -472,21 +555,19 @@ ${trisXml}        </triangles>
 }
 
 function build3mfModel(plateTris: number[], iconTris: number[]): string {
-  const objects: string[] = [buildObjectXml(1, plateTris)]
-  const buildItems = ['    <item objectid="1" />']
-
+  const objects = [buildObjectXml(1, plateTris)]
+  const items = ['    <item objectid="1" />']
   if (iconTris.length > 0) {
     objects.push(buildObjectXml(2, iconTris))
-    buildItems.push('    <item objectid="2" />')
+    items.push('    <item objectid="2" />')
   }
-
   return `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
   <resources>
 ${objects.join('\n')}
   </resources>
   <build>
-${buildItems.join('\n')}
+${items.join('\n')}
   </build>
 </model>`
 }
@@ -510,24 +591,20 @@ export function use3mfDownload() {
     const iconTris = collectIconTris(svgEl, font)
 
     const enc = new TextEncoder()
-
     const contentTypes = `<?xml version="1.0" encoding="UTF-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>
 </Types>`
-
     const rels = `<?xml version="1.0" encoding="UTF-8"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>
 </Relationships>`
 
-    const modelXml = build3mfModel(plateTris, iconTris)
-
     const zipped = fflate.zipSync({
       '[Content_Types].xml': enc.encode(contentTypes),
       '_rels/.rels': enc.encode(rels),
-      '3D/3dmodel.model': enc.encode(modelXml),
+      '3D/3dmodel.model': enc.encode(build3mfModel(plateTris, iconTris)),
     })
 
     const blob = new Blob([zipped.buffer as ArrayBuffer], { type: 'model/3mf' })
