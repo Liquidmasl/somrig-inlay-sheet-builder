@@ -214,12 +214,26 @@ function groupRingsIntoShapes(rings: [number, number][][]): Shape[] {
 
 // ── Extrusion ─────────────────────────────────────────────────────────────────
 
+/** Remove consecutive duplicate points (including the wrap-around last→first). */
+function cleanRing(ring: [number, number][]): [number, number][] {
+  const EPS = 1e-6
+  return ring.filter((pt, i) => {
+    const next = ring[(i + 1) % ring.length]
+    return Math.abs(pt[0] - next[0]) > EPS || Math.abs(pt[1] - next[1]) > EPS
+  })
+}
+
 function extrudePolygon(
   outer: [number, number][],
   holes: [number, number][][],
   z0: number,
   z1: number,
 ): number[] {
+  // Strip duplicate consecutive points before any winding or earcut logic.
+  // opentype.js paths end each subpath at the M starting point, so the ring
+  // always contains a duplicate first/last vertex that produces degenerate wall quads.
+  outer = cleanRing(outer)
+  holes = holes.map(cleanRing).filter((h) => h.length >= 3)
   if (outer.length < 3) return []
 
   // Normalise winding so wall generation can rely on consistent traversal direction.
@@ -500,6 +514,30 @@ function collectIconTris(svgEl: SVGSVGElement, font: opentype.Font): number[] {
     processRings([rectPolygon(x, y, w, h)])
   }
 
+  // ── Separator lines (<line>) ─────────────────────────────────────────────────
+  const lines = svgEl.querySelectorAll<SVGLineElement>('g[clip-path] line')
+  for (const lineEl of lines) {
+    const x1 = parseFloat(lineEl.getAttribute('x1') ?? '0')
+    const y1 = parseFloat(lineEl.getAttribute('y1') ?? '0')
+    const x2 = parseFloat(lineEl.getAttribute('x2') ?? '0')
+    const y2 = parseFloat(lineEl.getAttribute('y2') ?? '0')
+    const thickness = parseFloat(lineEl.getAttribute('stroke-width') ?? '0.3')
+    const dx = x2 - x1
+    const dy = y2 - y1
+    const len = Math.sqrt(dx * dx + dy * dy)
+    if (len < 0.01) continue
+    // Perpendicular half-offset to turn the line into a rectangle
+    const nx = (-dy / len) * (thickness / 2)
+    const ny = (dx / len) * (thickness / 2)
+    const corners: [number, number][] = [
+      [x1 + nx, y1 + ny],
+      [x2 + nx, y2 + ny],
+      [x2 - nx, y2 - ny],
+      [x1 - nx, y1 - ny],
+    ]
+    processRings([corners])
+  }
+
   // ── Text labels (<text>) ────────────────────────────────────────────────────
   const texts = svgEl.querySelectorAll<SVGTextElement>('g[clip-path] text')
   for (const textEl of texts) {
@@ -600,18 +638,30 @@ const FACE_DOWN_TRANSFORM = '1 0 0 0 -1 0 0 0 -1 0 0 0'
 
 function build3mfModel(plateTris: number[], iconTris: number[]): string {
   const objects = [buildObjectXml(1, plateTris)]
-  const items = [`    <item objectid="1" transform="${FACE_DOWN_TRANSFORM}" />`]
+  let buildItem: string
+
   if (iconTris.length > 0) {
     objects.push(buildObjectXml(2, iconTris))
-    items.push(`    <item objectid="2" transform="${FACE_DOWN_TRANSFORM}" />`)
+    // Wrap both meshes in a component object so the slicer keeps them grouped.
+    // Each component retains its own filament assignment in Bambu Studio.
+    objects.push(`    <object id="3" type="model">
+      <components>
+        <component objectid="1" />
+        <component objectid="2" />
+      </components>
+    </object>`)
+    buildItem = `    <item objectid="3" transform="${FACE_DOWN_TRANSFORM}" />`
+  } else {
+    buildItem = `    <item objectid="1" transform="${FACE_DOWN_TRANSFORM}" />`
   }
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
   <resources>
 ${objects.join('\n')}
   </resources>
   <build>
-${items.join('\n')}
+${buildItem}
   </build>
 </model>`
 }
