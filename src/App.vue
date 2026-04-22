@@ -5,6 +5,7 @@ import {
   mdiDownload,
   mdiPlus,
   mdiPrinter,
+  mdiPrinter3d,
 } from '@mdi/js'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import AppHeader from './components/AppHeader.vue'
@@ -13,6 +14,7 @@ import ButtonInlaySVG, {
   type IndicatorType,
   type ZoneConfig,
 } from './components/ButtonInlaySVG.vue'
+import { use3mfDownload } from './composables/use3mfDownload'
 import { useDarkMode } from './composables/useDarkMode'
 import { useSheets } from './composables/useSheets'
 import { useSvgDownload } from './composables/useSvgDownload'
@@ -178,21 +180,33 @@ function handlePrint() {
 }
 
 const { downloadButtonSvg } = useSvgDownload()
+const { download3mf } = use3mfDownload()
 
 // DOM element refs for desktop grid cards, keyed by button ID.
-// Used to locate the <svg> element for SVG download (desktop cards are always
-// in the DOM even on mobile, so this works regardless of viewport size).
+// Used to locate the <svg> element for SVG / 3MF download (desktop cards are
+// always in the DOM even on mobile, so this works regardless of viewport size).
 const cardRefs: Record<string, Element> = {}
 
-function downloadActiveSvg() {
-  if (!activeButtonId.value) return
+function getActiveSvg(): SVGSVGElement | null {
+  if (!activeButtonId.value) return null
   const card = cardRefs[activeButtonId.value]
-  if (!card) return
-  const svg = card.querySelector('svg')
+  if (!card) return null
+  return card.querySelector('svg') as SVGSVGElement | null
+}
+
+function downloadActiveSvg() {
+  const svg = getActiveSvg()
   if (!svg) return
-  downloadButtonSvg(
-    svg as SVGSVGElement,
-    `button-inlay-${activeButtonIndex.value + 1}.svg`,
+  downloadButtonSvg(svg, `button-inlay-${activeButtonIndex.value + 1}.svg`)
+}
+
+async function downloadActive3mf() {
+  const svg = getActiveSvg()
+  if (!svg) return
+  await download3mf(
+    svg,
+    activeButtonType.value,
+    `button-inlay-${activeButtonIndex.value + 1}.3mf`,
   )
 }
 </script>
@@ -246,12 +260,23 @@ function downloadActiveSvg() {
             @click="downloadActiveSvg"
             class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
             aria-label="Download active button as SVG"
-            title="Download SVG (physical mm dimensions, suitable for 3D printing / laser cutting)"
+            title="Download SVG (physical mm dimensions, suitable for laser cutting)"
           >
             <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
               <path :d="mdiDownload" />
             </svg>
             <span>Download SVG</span>
+          </button>
+          <button
+            @click="downloadActive3mf"
+            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+            aria-label="Download active button as 3MF for multi-colour 3D printing"
+            title="Download 3MF (plate + icon layer, ready for Bambu Studio multi-colour)"
+          >
+            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
+              <path :d="mdiPrinter3d" />
+            </svg>
+            <span>Download 3MF</span>
           </button>
         </div>
 
