@@ -176,23 +176,38 @@ interface Shape {
 
 function groupRingsIntoShapes(rings: [number, number][][]): Shape[] {
   if (rings.length === 0) return []
-  if (rings.length === 1) return [{ outer: rings[0], holes: [] }]
 
+  // Sort largest → smallest so earlier entries always have larger area than later ones
   const sorted = [...rings].sort(
     (a, b) => Math.abs(signedArea(b)) - Math.abs(signedArea(a)),
   )
 
+  // Nesting depth = number of larger rings that contain this ring's first point.
+  // Even depth (0, 2, 4…) → outer shape (filled).
+  // Odd depth  (1, 3, 5…) → hole inside its nearest containing outer.
+  const depths = sorted.map(
+    (ring, i) =>
+      sorted.slice(0, i).filter((larger) => pointInPolygon(ring[0], larger))
+        .length,
+  )
+
   const shapes: Shape[] = []
-  for (const ring of sorted) {
-    let placed = false
-    for (const shape of shapes) {
-      if (pointInPolygon(ring[0], shape.outer)) {
-        shape.holes.push(ring)
-        placed = true
-        break
+  for (let i = 0; i < sorted.length; i++) {
+    if (depths[i] % 2 === 0) {
+      shapes.push({ outer: sorted[i], holes: [] })
+    } else {
+      // Assign to the smallest-area outer that still contains this ring
+      let nearest: Shape | null = null
+      let nearestArea = Infinity
+      for (const shape of shapes) {
+        const a = Math.abs(signedArea(shape.outer))
+        if (a < nearestArea && pointInPolygon(sorted[i][0], shape.outer)) {
+          nearest = shape
+          nearestArea = a
+        }
       }
+      if (nearest) nearest.holes.push(sorted[i])
     }
-    if (!placed) shapes.push({ outer: ring, holes: [] })
   }
   return shapes
 }
@@ -206,6 +221,11 @@ function extrudePolygon(
   z1: number,
 ): number[] {
   if (outer.length < 3) return []
+
+  // Normalise winding so wall generation can rely on consistent traversal direction.
+  // Outer must be CCW (positive signed area in world Y-up), holes must be CW.
+  if (signedArea(outer) < 0) outer = [...outer].reverse()
+  holes = holes.map((h) => (signedArea(h) < 0 ? [...h].reverse() : h))
 
   const flat: number[] = []
   const holeIndices: number[] = []
@@ -223,19 +243,19 @@ function extrudePolygon(
 
   const tris: number[] = []
 
-  // Top face (z1) — winding flipped so normal points +Z
+  // Top face (z1) — earcut CCW order → normal points +Z
   for (let i = 0; i < indices.length; i += 3) {
     const a = allPts[indices[i]],
       b = allPts[indices[i + 1]],
       c = allPts[indices[i + 2]]
-    tris.push(a[0], a[1], z1, c[0], c[1], z1, b[0], b[1], z1)
+    tris.push(a[0], a[1], z1, b[0], b[1], z1, c[0], c[1], z1)
   }
-  // Bottom face (z0) — normal points −Z
+  // Bottom face (z0) — flipped to CW → normal points −Z
   for (let i = 0; i < indices.length; i += 3) {
     const a = allPts[indices[i]],
       b = allPts[indices[i + 1]],
       c = allPts[indices[i + 2]]
-    tris.push(a[0], a[1], z0, b[0], b[1], z0, c[0], c[1], z0)
+    tris.push(a[0], a[1], z0, c[0], c[1], z0, b[0], b[1], z0)
   }
 
   // Side walls
@@ -534,16 +554,36 @@ const fmt = (n: number) => n.toFixed(4)
 
 function buildObjectXml(id: number, tris: number[]): string {
   const triCount = tris.length / 9
-  let vertsXml = ''
-  let trisXml = ''
+  const vertMap = new Map<string, number>()
+  const uniqueVerts: number[] = []
+  const triIndices: [number, number, number][] = []
+
   for (let i = 0; i < triCount; i++) {
     const b = i * 9
+    const tri: [number, number, number] = [0, 0, 0]
     for (let v = 0; v < 3; v++) {
       const vb = b + v * 3
-      vertsXml += `        <vertex x="${fmt(tris[vb])}" y="${fmt(tris[vb + 1])}" z="${fmt(tris[vb + 2])}" />\n`
+      const key = `${fmt(tris[vb])},${fmt(tris[vb + 1])},${fmt(tris[vb + 2])}`
+      let idx = vertMap.get(key)
+      if (idx === undefined) {
+        idx = uniqueVerts.length / 3
+        vertMap.set(key, idx)
+        uniqueVerts.push(tris[vb], tris[vb + 1], tris[vb + 2])
+      }
+      tri[v] = idx
     }
-    trisXml += `        <triangle v1="${i * 3}" v2="${i * 3 + 1}" v3="${i * 3 + 2}" />\n`
+    triIndices.push(tri)
   }
+
+  let vertsXml = ''
+  for (let i = 0; i < uniqueVerts.length; i += 3) {
+    vertsXml += `        <vertex x="${fmt(uniqueVerts[i])}" y="${fmt(uniqueVerts[i + 1])}" z="${fmt(uniqueVerts[i + 2])}" />\n`
+  }
+  let trisXml = ''
+  for (const [v1, v2, v3] of triIndices) {
+    trisXml += `        <triangle v1="${v1}" v2="${v2}" v3="${v3}" />\n`
+  }
+
   return `    <object id="${id}" type="model">
       <mesh>
         <vertices>
@@ -554,12 +594,16 @@ ${trisXml}        </triangles>
     </object>`
 }
 
+// 180° rotation around X: (x,y,z)→(x,−y,−z)
+// Puts the face (z=0, currently the top) at z=0 minimum so the slicer places it on the build plate.
+const FACE_DOWN_TRANSFORM = '1 0 0 0 -1 0 0 0 -1 0 0 0'
+
 function build3mfModel(plateTris: number[], iconTris: number[]): string {
   const objects = [buildObjectXml(1, plateTris)]
-  const items = ['    <item objectid="1" />']
+  const items = [`    <item objectid="1" transform="${FACE_DOWN_TRANSFORM}" />`]
   if (iconTris.length > 0) {
     objects.push(buildObjectXml(2, iconTris))
-    items.push('    <item objectid="2" />')
+    items.push(`    <item objectid="2" transform="${FACE_DOWN_TRANSFORM}" />`)
   }
   return `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
