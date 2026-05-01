@@ -10,7 +10,7 @@ import type {
 } from '../types'
 
 const DEFAULT_ZONE_TYPES: ActionType[] = ['single', 'hold', 'double']
-const STORAGE_KEY = 'tradvri-button-customizer-state-v1'
+const STORAGE_KEY = 'button-customizer-state-v1'
 const SAVE_FILE_VERSION = 1
 
 interface PersistedState {
