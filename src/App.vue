@@ -2,7 +2,11 @@
 import {
   mdiChevronLeft,
   mdiChevronRight,
+  mdiContentCopy,
+  mdiContentSave,
+  mdiDelete,
   mdiDownload,
+  mdiFolderOpen,
   mdiPlus,
   mdiPrinter,
 } from '@mdi/js'
@@ -48,8 +52,17 @@ onUnmounted(() => {
   }
 })
 
-const { activeSheet, activeSheetId, activeButtonId, addButton, setButtonType } =
-  useSheets()
+const {
+  activeSheet,
+  activeSheetId,
+  activeButtonId,
+  addButton,
+  duplicateButton,
+  removeButton,
+  setButtonType,
+  exportState,
+  importState,
+} = useSheets()
 
 const activeButtonType = computed<ButtonType>(
   () => activeSheet.value?.buttonType ?? 'somrig',
@@ -61,6 +74,8 @@ const carouselRef = ref<HTMLElement | null>(null)
 const editorPanelRef = ref<HTMLElement | null>(null)
 const windowHeight = ref(window.innerHeight)
 const editorPanelHeight = ref(420) // Default fallback
+const saveLoadStatus = ref('Auto-saved in this browser')
+const importFileInput = ref<HTMLInputElement | null>(null)
 
 // Update window height on resize
 function updateWindowHeight() {
@@ -173,8 +188,71 @@ function handleAddButton() {
   if (btn) activeButtonId.value = btn.id
 }
 
+function handleDuplicateButton() {
+  if (!activeButtonId.value) return
+  const btn = duplicateButton(activeSheetId.value, activeButtonId.value)
+  if (btn) activeButtonId.value = btn.id
+}
+
+function handleDeleteButton() {
+  if (!activeButtonId.value) return
+
+  const confirmed = window.confirm(
+    'Delete the selected button? This cannot be undone.',
+  )
+  if (!confirmed) return
+
+  removeButton(activeSheetId.value, activeButtonId.value)
+  setSaveLoadStatus('Deleted button')
+}
+
 function handlePrint() {
   window.print()
+}
+
+function setSaveLoadStatus(message: string) {
+  saveLoadStatus.value = message
+  window.setTimeout(() => {
+    saveLoadStatus.value = 'Auto-saved in this browser'
+  }, 3000)
+}
+
+function downloadJsonFile(filename: string, data: unknown) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: 'application/json',
+  })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+function handleSaveDesign() {
+  downloadJsonFile('tradvri-button-design.json', exportState())
+  setSaveLoadStatus('Saved design file')
+}
+
+function handleLoadDesignClick() {
+  importFileInput.value?.click()
+}
+
+async function handleLoadDesign(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+
+  try {
+    const text = await file.text()
+    const didImport = importState(JSON.parse(text))
+    setSaveLoadStatus(
+      didImport ? 'Loaded design file' : 'Could not load this design file',
+    )
+  } catch {
+    setSaveLoadStatus('Could not load this design file')
+  }
 }
 
 const { downloadButtonSvg } = useSvgDownload()
@@ -219,7 +297,61 @@ function downloadActiveSvg() {
         </div>
 
         <!-- Print/Download buttons -->
-        <div class="flex items-center justify-center gap-2 mb-3">
+        <div class="flex flex-wrap items-center justify-center gap-2 mb-3">
+          <input
+            ref="importFileInput"
+            type="file"
+            accept="application/json,.json"
+            class="hidden"
+            @change="handleLoadDesign"
+          />
+          <button
+            @click="handleSaveDesign"
+            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+            aria-label="Save design file"
+            title="Save design file"
+          >
+            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
+              <path :d="mdiContentSave" />
+            </svg>
+            <span>Save</span>
+          </button>
+          <button
+            @click="handleLoadDesignClick"
+            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+            aria-label="Load design file"
+            title="Load design file"
+          >
+            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
+              <path :d="mdiFolderOpen" />
+            </svg>
+            <span>Load</span>
+          </button>
+          <button
+            @click="handleDuplicateButton"
+            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            :disabled="!activeButtonId"
+            aria-label="Duplicate active button"
+            title="Duplicate active button"
+          >
+            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
+              <path :d="mdiContentCopy" />
+            </svg>
+            <span>Duplicate</span>
+          </button>
+          <button
+            @click="handleDeleteButton"
+            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            :disabled="!activeButtonId"
+            aria-label="Delete active button"
+            title="Delete active button"
+          >
+            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
+              <path :d="mdiDelete" />
+            </svg>
+            <span>Delete</span>
+          </button>
+          <span class="w-full sm:w-auto text-center text-xs text-gray-500 dark:text-gray-400 px-2">{{ saveLoadStatus }}</span>
           <button
             @click="handlePrint"
             class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
