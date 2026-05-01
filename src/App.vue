@@ -230,7 +230,7 @@ function downloadJsonFile(filename: string, data: unknown) {
 }
 
 function handleSaveDesign() {
-  downloadJsonFile('tradvri-button-design.json', exportState())
+  downloadJsonFile('button-design.json', exportState())
   setSaveLoadStatus('Saved design file')
 }
 
