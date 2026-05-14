@@ -212,7 +212,7 @@ function handlePrint() {
 
 function setSaveLoadStatus(message: string) {
   saveLoadStatus.value = message
-  window.setTimeout(() => {
+  setTimeout(() => {
     saveLoadStatus.value = 'Auto-saved in this browser'
   }, 3000)
 }
