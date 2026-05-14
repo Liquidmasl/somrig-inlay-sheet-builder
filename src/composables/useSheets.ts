@@ -93,6 +93,19 @@ function isSheetArray(value: unknown): value is Sheet[] {
   return Array.isArray(value) && value.every(isValidSheet)
 }
 
+function safeNextId(importedSheets: Sheet[]): number {
+  let max = 0
+  for (const sheet of importedSheets) {
+    const n = parseInt(sheet.id, 10)
+    if (!isNaN(n)) max = Math.max(max, n)
+    for (const btn of sheet.buttons) {
+      const m = btn.id.match(/-btn-(\d+)$/)
+      if (m) max = Math.max(max, parseInt(m[1], 10))
+    }
+  }
+  return max + 1
+}
+
 function createInitialState(): PersistedState {
   const firstSheet = createDefaultSheet(nextId(), 'Sheet 1')
   return {
@@ -130,7 +143,7 @@ function normalizeState(value: unknown): PersistedState | null {
   return {
     version:
       typeof value.version === 'number' ? value.version : SAVE_FILE_VERSION,
-    nextId: typeof value.nextId === 'number' ? value.nextId : _nextId,
+    nextId: safeNextId(importedSheets),
     sheets: importedSheets,
     activeSheetId: activeSheet.id,
     activeButtonId,
