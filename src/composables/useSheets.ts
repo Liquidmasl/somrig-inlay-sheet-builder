@@ -262,7 +262,7 @@ export function useSheets() {
     if (idx === -1) return null
 
     const sourceButton = sheet.buttons[idx]
-    const clonedButton: ButtonInlay = JSON.parse(JSON.stringify(sourceButton))
+    const clonedButton: ButtonInlay = structuredClone(sourceButton)
     clonedButton.id = `${sheetId}-btn-${nextId()}`
 
     sheet.buttons.splice(idx + 1, 0, clonedButton)
