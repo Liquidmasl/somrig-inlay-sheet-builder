@@ -31,3 +31,4 @@ tests/e2e/screenshots/*.png
 *.njsproj
 *.sln
 *.sw?
+*.local.*
