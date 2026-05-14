@@ -70,8 +70,27 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
+function isValidButton(value: unknown): value is ButtonInlay {
+  if (!isObject(value)) return false
+  if (typeof value.id !== 'string' || !value.id) return false
+  const top = value.top as Record<string, unknown>
+  const bottom = value.bottom as Record<string, unknown>
+  if (!isObject(top) || !Array.isArray(top.zones)) return false
+  if (!isObject(bottom) || !Array.isArray(bottom.zones)) return false
+  return true
+}
+
+function isValidSheet(value: unknown): value is Sheet {
+  if (!isObject(value)) return false
+  if (typeof value.id !== 'string' || !value.id) return false
+  if (typeof value.name !== 'string') return false
+  if (!Array.isArray(value.buttons) || !value.buttons.every(isValidButton))
+    return false
+  return true
+}
+
 function isSheetArray(value: unknown): value is Sheet[] {
-  return Array.isArray(value)
+  return Array.isArray(value) && value.every(isValidSheet)
 }
 
 function createInitialState(): PersistedState {
