@@ -336,21 +336,21 @@ function downloadActiveSvg() {
           <div class="flex items-center gap-1">
             <button
               @click="handleSaveDesign"
-              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
               aria-label="Save design file"
               title="Save design file"
             >
               <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiContentSave" /></svg>
-              <span>Save</span>
+              <span class="hidden md:inline">Save</span>
             </button>
             <button
               @click="handleLoadDesignClick"
-              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
               aria-label="Load design file"
               title="Load design file"
             >
               <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiFolderOpen" /></svg>
-              <span>Load</span>
+              <span class="hidden md:inline">Load</span>
             </button>
             <span :title="saveIconTitle" class="flex items-center px-1">
               <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current transition-colors" :class="saveIconClass">
@@ -361,34 +361,34 @@ function downloadActiveSvg() {
 
           <div class="h-4 w-px bg-gray-300 dark:bg-gray-600"></div>
 
-          <!-- Print / Download group -->
+          <!-- Print / Export group -->
           <div class="flex items-center gap-1">
             <button
               @click="handlePrint"
-              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
               aria-label="Print sheet"
               title="Print"
             >
               <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiPrinter" /></svg>
-              <span>Print</span>
+              <span class="hidden md:inline">Print</span>
             </button>
             <button
               @click="handlePrint"
-              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
-              aria-label="Download as PDF"
-              title="Download PDF"
+              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+              aria-label="Save as PDF via print dialog"
+              title="Save as PDF (opens print dialog)"
             >
               <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiDownload" /></svg>
-              <span>Download PDF</span>
+              <span class="hidden md:inline">PDF</span>
             </button>
             <button
               @click="downloadActiveSvg"
-              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
               aria-label="Download active button as SVG"
               title="Download SVG (physical mm dimensions, suitable for 3D printing / laser cutting)"
             >
               <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiDownload" /></svg>
-              <span>Download SVG</span>
+              <span class="hidden md:inline">SVG</span>
             </button>
           </div>
         </div>
