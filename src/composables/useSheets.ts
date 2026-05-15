@@ -222,6 +222,9 @@ if (typeof window !== 'undefined') {
   setInterval(() => {
     if (isDirty.value) persistState()
   }, 30_000)
+  window.addEventListener('beforeunload', () => {
+    if (isDirty.value) persistState()
+  })
 }
 
 export function useSheets() {
