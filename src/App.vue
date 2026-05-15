@@ -538,9 +538,9 @@ function downloadActiveSvg() {
                 :scale="previewScale"
               />
             </button>
-            <div v-if="activeButtonId === btn.id" class="absolute top-1 right-1 flex gap-1 z-10">
+            <div class="absolute top-1 right-1 flex gap-1 z-10">
               <button
-                @click="handleDuplicateButton"
+                @click="selectButton(btn.id); handleDuplicateButton()"
                 class="w-6 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 title="Duplicate button"
                 aria-label="Duplicate button"
@@ -548,7 +548,7 @@ function downloadActiveSvg() {
                 <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 fill-current"><path :d="mdiContentCopy" /></svg>
               </button>
               <button
-                @click="handleDeleteButton"
+                @click="selectButton(btn.id); handleDeleteButton()"
                 class="w-6 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
                 title="Delete button"
                 aria-label="Delete button"
