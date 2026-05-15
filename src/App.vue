@@ -379,7 +379,7 @@ function downloadActiveSvg() {
               title="Save as PDF (opens print dialog)"
             >
               <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiDownload" /></svg>
-              <span class="hidden md:inline">PDF</span>
+              <span>PDF</span>
             </button>
             <button
               @click="downloadActiveSvg"
@@ -388,7 +388,7 @@ function downloadActiveSvg() {
               title="Download SVG (physical mm dimensions, suitable for 3D printing / laser cutting)"
             >
               <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiDownload" /></svg>
-              <span class="hidden md:inline">SVG</span>
+              <span>SVG</span>
             </button>
           </div>
         </div>
