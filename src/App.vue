@@ -18,6 +18,7 @@ import ButtonInlaySVG, {
   type ZoneConfig,
 } from './components/ButtonInlaySVG.vue'
 import { useDarkMode } from './composables/useDarkMode'
+import { usePdfDownload } from './composables/usePdfDownload'
 import { useSheets } from './composables/useSheets'
 import { useSvgDownload } from './composables/useSvgDownload'
 import type { ActionType, ActionZone, ButtonType } from './types'
@@ -243,22 +244,31 @@ async function handleLoadDesign(event: Event) {
 }
 
 const { downloadButtonSvg } = useSvgDownload()
+const { downloadSheetPdf } = usePdfDownload()
 
 // DOM element refs for desktop grid cards, keyed by button ID.
-// Used to locate the <svg> element for SVG download (desktop cards are always
-// in the DOM even on mobile, so this works regardless of viewport size).
+// Desktop grid is always in the DOM (hidden md:flex), so cardRefs works on any viewport.
 const cardRefs: Record<string, Element> = {}
 
-function downloadActiveSvg() {
-  if (!activeButtonId.value) return
-  const card = cardRefs[activeButtonId.value]
-  if (!card) return
-  const svg = card.querySelector('svg')
-  if (!svg) return
-  downloadButtonSvg(
-    svg as SVGSVGElement,
-    `button-inlay-${activeButtonIndex.value + 1}.svg`,
+function getSvgForButton(buttonId: string): SVGSVGElement | null {
+  return (
+    (cardRefs[buttonId]?.querySelector('svg') as SVGSVGElement | null) ?? null
   )
+}
+
+function downloadSvgForButton(buttonId: string) {
+  const svg = getSvgForButton(buttonId)
+  if (!svg) return
+  const index =
+    activeSheet.value?.buttons.findIndex((b) => b.id === buttonId) ?? 0
+  downloadButtonSvg(svg, `button-inlay-${index + 1}.svg`)
+}
+
+async function downloadSheetPdfAction() {
+  const svgs = (activeSheet.value?.buttons ?? [])
+    .map((btn) => getSvgForButton(btn.id))
+    .filter((svg): svg is SVGSVGElement => svg !== null)
+  await downloadSheetPdf(svgs, 'sheet.pdf')
 }
 </script>
 
@@ -330,22 +340,13 @@ function downloadActiveSvg() {
               <span class="hidden md:inline">Print</span>
             </button>
             <button
-              @click="handlePrint"
+              @click="downloadSheetPdfAction"
               class="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l border-gray-200 dark:border-gray-700"
-              aria-label="Save as PDF via print dialog"
-              title="Save as PDF (opens print dialog)"
+              aria-label="Download full sheet as PDF"
+              title="Download PDF (full sheet, A4)"
             >
               <svg viewBox="0 0 24 24" class="w-4 h-4 fill-current"><path :d="mdiDownload" /></svg>
-              <span>PDF</span>
-            </button>
-            <button
-              @click="downloadActiveSvg"
-              class="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l border-gray-200 dark:border-gray-700"
-              aria-label="Download active button as SVG"
-              title="Download SVG (physical mm dimensions, suitable for 3D printing / laser cutting)"
-            >
-              <svg viewBox="0 0 24 24" class="w-4 h-4 fill-current"><path :d="mdiDownload" /></svg>
-              <span>SVG</span>
+              <span class="hidden md:inline">PDF</span>
             </button>
           </div>
         </div>
@@ -384,6 +385,16 @@ function downloadActiveSvg() {
                     :fill-color="fillColor"
                     :scale="previewScale"
                   />
+                </button>
+                <button
+                  v-if="activeButtonId === btn.id"
+                  @click="downloadSvgForButton(btn.id)"
+                  class="absolute top-1 left-1 z-10 flex items-center gap-0.5 px-1.5 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  title="Download SVG"
+                  aria-label="Download SVG"
+                >
+                  <svg viewBox="0 0 24 24" class="w-3 h-3 fill-current"><path :d="mdiDownload" /></svg>
+                  SVG
                 </button>
                 <div v-if="activeButtonId === btn.id" class="absolute top-1 right-1 flex gap-1 z-10">
                   <button
@@ -494,6 +505,15 @@ function downloadActiveSvg() {
                 :fill-color="fillColor"
                 :scale="previewScale"
               />
+            </button>
+            <button
+              @click="downloadSvgForButton(btn.id)"
+              class="absolute top-1 left-1 z-10 flex items-center gap-0.5 px-1.5 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title="Download SVG"
+              aria-label="Download SVG"
+            >
+              <svg viewBox="0 0 24 24" class="w-3 h-3 fill-current"><path :d="mdiDownload" /></svg>
+              SVG
             </button>
             <div class="absolute top-1 right-1 flex gap-1 z-10">
               <button
