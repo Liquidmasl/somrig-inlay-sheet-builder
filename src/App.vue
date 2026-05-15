@@ -285,7 +285,7 @@ function downloadActiveSvg() {
               v-for="bt in (['somrig', 'bilresa'] as ButtonType[])"
               :key="bt"
               @click="setButtonType(activeSheetId, bt)"
-              class="px-2.5 py-1 text-xs font-medium transition-colors capitalize"
+              class="px-2.5 py-1 text-sm transition-colors capitalize"
               :class="activeButtonType === bt
                 ? 'bg-blue-600 text-white'
                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
