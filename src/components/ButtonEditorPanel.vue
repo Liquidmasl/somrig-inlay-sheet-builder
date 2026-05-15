@@ -373,7 +373,7 @@ function onUpdateSeparator(
                       :title="activeButton.top.zones[activeTopZone].icon ? 'Change icon' : 'Pick icon'"
                       @click="openIconPicker('top', activeTopZone)"
                     >
-                      <svg v-if="activeButton.top.zones[activeTopZone].icon" viewBox="0 0 24 24" class="w-5 h-5 shrink-0 text-gray-700 dark:text-gray-300" fill="currentColor">
+                      <svg v-if="activeButton.top.zones[activeTopZone].icon" viewBox="0 0 24 24" class="w-4 h-4 shrink-0 text-gray-700 dark:text-gray-300" fill="currentColor">
                         <path :d="activeButton.top.zones[activeTopZone].icon!" />
                       </svg>
                       <span class="text-gray-400 text-xs truncate" :class="{ 'text-gray-700 dark:text-gray-300': activeButton.top.zones[activeTopZone].icon }">
@@ -511,7 +511,7 @@ function onUpdateSeparator(
                 <template v-if="activeBotZoneTab === 'icon'">
                   <div class="flex items-center gap-2">
                     <button class="flex-1 flex items-center gap-2 px-2 py-1.5 rounded-md border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 text-sm text-left transition-colors bg-white dark:bg-gray-800" :title="activeButton.bottom.zones[activeBotZone].icon ? 'Change icon' : 'Pick icon'" @click="openIconPicker('bottom', activeBotZone)">
-                      <svg v-if="activeButton.bottom.zones[activeBotZone].icon" viewBox="0 0 24 24" class="w-5 h-5 shrink-0 text-gray-700 dark:text-gray-300" fill="currentColor"><path :d="activeButton.bottom.zones[activeBotZone].icon!" /></svg>
+                      <svg v-if="activeButton.bottom.zones[activeBotZone].icon" viewBox="0 0 24 24" class="w-4 h-4 shrink-0 text-gray-700 dark:text-gray-300" fill="currentColor"><path :d="activeButton.bottom.zones[activeBotZone].icon!" /></svg>
                       <span class="text-gray-400 text-xs truncate" :class="{ 'text-gray-700 dark:text-gray-300': activeButton.bottom.zones[activeBotZone].icon }">{{ activeButton.bottom.zones[activeBotZone].icon ? 'Change icon' : 'No icon — click to add' }}</span>
                     </button>
                     <button v-if="activeButton.bottom.zones[activeBotZone].icon" class=" rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Remove icon" @click="clearIcon('bottom', activeBotZone)">×</button>
