@@ -285,7 +285,7 @@ function downloadActiveSvg() {
               v-for="bt in (['somrig', 'bilresa'] as ButtonType[])"
               :key="bt"
               @click="setButtonType(activeSheetId, bt)"
-              class="px-2.5 py-1 text-sm transition-colors capitalize"
+              class="px-2.5 py-1 text-xs transition-colors capitalize"
               :class="activeButtonType === bt
                 ? 'bg-blue-600 text-white'
                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
@@ -298,7 +298,7 @@ function downloadActiveSvg() {
           <div class="inline-flex rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
             <button
               @click="handleSaveDesign"
-              class="flex items-center gap-1 px-2.5 py-1 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              class="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               aria-label="Save design file"
               title="Save design file"
             >
@@ -307,7 +307,7 @@ function downloadActiveSvg() {
             </button>
             <button
               @click="handleLoadDesignClick"
-              class="flex items-center gap-1 px-2.5 py-1 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l border-gray-200 dark:border-gray-700"
+              class="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l border-gray-200 dark:border-gray-700"
               aria-label="Load design file"
               title="Load design file"
             >
@@ -322,7 +322,7 @@ function downloadActiveSvg() {
           <div class="inline-flex rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
             <button
               @click="handlePrint"
-              class="flex items-center gap-1 px-2.5 py-1 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              class="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               aria-label="Print sheet"
               title="Print"
             >
@@ -331,7 +331,7 @@ function downloadActiveSvg() {
             </button>
             <button
               @click="handlePrint"
-              class="flex items-center gap-1 px-2.5 py-1 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l border-gray-200 dark:border-gray-700"
+              class="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l border-gray-200 dark:border-gray-700"
               aria-label="Save as PDF via print dialog"
               title="Save as PDF (opens print dialog)"
             >
@@ -340,7 +340,7 @@ function downloadActiveSvg() {
             </button>
             <button
               @click="downloadActiveSvg"
-              class="flex items-center gap-1 px-2.5 py-1 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l border-gray-200 dark:border-gray-700"
+              class="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l border-gray-200 dark:border-gray-700"
               aria-label="Download active button as SVG"
               title="Download SVG (physical mm dimensions, suitable for 3D printing / laser cutting)"
             >
