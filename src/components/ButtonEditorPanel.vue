@@ -334,7 +334,7 @@ function onUpdateSeparator(
                     <svg v-if="t === 'single'" viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor"><circle cx="12" cy="12" r="4" /></svg>
                     <svg v-else-if="t === 'double'" viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor"><circle :cx="12+7" cy="12" r="4" /><circle :cx="12-7" cy="12" r="4" /></svg>
                     <svg v-else-if="t === 'hold'" viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor"><rect x="2" y="8" width="20" height="8" rx="4" ry="4" /></svg>
-                    <span v-else-if="t === 'none'" class="text-xs">none</span>
+                    <span v-else-if="t === 'none'" class="flex items-center h-4 text-xs">none</span>
                   </button>
                 </div>
                 <!-- Icon/Label index-card tabs -->
@@ -480,7 +480,7 @@ function onUpdateSeparator(
                     <svg v-if="t === 'single'" viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor"><circle cx="12" cy="12" r="4" /></svg>
                     <svg v-else-if="t === 'double'" viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor"><circle :cx="12+7" cy="12" r="4" /><circle :cx="12-7" cy="12" r="4" /></svg>
                     <svg v-else-if="t === 'hold'" viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor"><rect x="2" y="8" width="20" height="8" rx="4" ry="4" /></svg>
-                    <span v-else-if="t === 'none'" class="text-xs">none</span>
+                    <span v-else-if="t === 'none'" class="flex items-center h-4 text-xs">none</span>
                                     </button>
                 </div>
                 <div v-if="activeButton.bottom.zones[activeBotZone].icon" class="flex self-center">
