@@ -193,6 +193,16 @@ function persistState(): void {
   isDirty.value = false
 }
 
+let _saveTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleSave() {
+  if (_saveTimer) clearTimeout(_saveTimer)
+  _saveTimer = setTimeout(() => {
+    persistState()
+    _saveTimer = null
+  }, 3000)
+}
+
 function importState(value: unknown): boolean {
   const imported = normalizeState(value)
   if (!imported) return false
@@ -201,6 +211,10 @@ function importState(value: unknown): boolean {
   activeSheetId.value = imported.activeSheetId
   activeButtonId.value = imported.activeButtonId
   _nextId = Math.max(imported.nextId, _nextId)
+  if (_saveTimer) {
+    clearTimeout(_saveTimer)
+    _saveTimer = null
+  }
   persistState()
   // The deep watch fires after this synchronous block and would re-set isDirty;
   // reset it once watchers have flushed.
@@ -210,20 +224,20 @@ function importState(value: unknown): boolean {
   return true
 }
 
+// Only sheet content changes mark dirty — selection changes don't.
 watch(
-  [sheets, activeSheetId, activeButtonId],
+  sheets,
   () => {
     isDirty.value = true
+    scheduleSave()
   },
   { deep: true },
 )
 
 if (typeof window !== 'undefined') {
-  setInterval(() => {
-    if (isDirty.value) persistState()
-  }, 30_000)
   window.addEventListener('beforeunload', () => {
-    if (isDirty.value) persistState()
+    if (_saveTimer) clearTimeout(_saveTimer)
+    persistState()
   })
 }
 
