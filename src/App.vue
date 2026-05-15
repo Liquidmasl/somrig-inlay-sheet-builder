@@ -1,13 +1,9 @@
 <script setup lang="ts">
 import {
-  mdiAlertCircle,
-  mdiCheckCircle,
   mdiChevronLeft,
   mdiChevronRight,
   mdiContentCopy,
   mdiContentSave,
-  mdiContentSaveAlert,
-  mdiContentSaveCheckOutline,
   mdiDelete,
   mdiDownload,
   mdiFolderOpen,
@@ -66,7 +62,6 @@ const {
   setButtonType,
   exportState,
   importState,
-  isDirty,
 } = useSheets()
 
 const activeButtonType = computed<ButtonType>(
@@ -80,36 +75,6 @@ const editorPanelRef = ref<HTMLElement | null>(null)
 const windowHeight = ref(window.innerHeight)
 const editorPanelHeight = ref(420) // Default fallback
 const importFileInput = ref<HTMLInputElement | null>(null)
-
-type FileOpStatus = 'file-ok' | 'file-error' | null
-const fileOpStatus = ref<FileOpStatus>(null)
-
-const saveIcon = computed(() => {
-  if (fileOpStatus.value === 'file-error') return mdiAlertCircle
-  if (fileOpStatus.value === 'file-ok') return mdiCheckCircle
-  return isDirty.value ? mdiContentSaveAlert : mdiContentSaveCheckOutline
-})
-const saveIconClass = computed(() => {
-  if (fileOpStatus.value === 'file-error') return 'text-red-500'
-  if (fileOpStatus.value === 'file-ok') return 'text-green-500'
-  return isDirty.value
-    ? 'text-amber-500 dark:text-amber-400'
-    : 'text-gray-400 dark:text-gray-500'
-})
-const saveIconTitle = computed(() => {
-  if (fileOpStatus.value === 'file-error') return 'Could not load file'
-  if (fileOpStatus.value === 'file-ok') return 'Operation successful'
-  return isDirty.value
-    ? 'Unsaved changes — auto-saves every 30s'
-    : 'All changes saved to browser'
-})
-
-function flashFileOp(status: FileOpStatus) {
-  fileOpStatus.value = status
-  setTimeout(() => {
-    fileOpStatus.value = null
-  }, 2000)
-}
 
 // Update window height on resize
 function updateWindowHeight() {
@@ -257,7 +222,6 @@ function downloadJsonFile(filename: string, data: unknown) {
 
 function handleSaveDesign() {
   downloadJsonFile('button-design.json', exportState())
-  flashFileOp('file-ok')
 }
 
 function handleLoadDesignClick() {
@@ -272,10 +236,9 @@ async function handleLoadDesign(event: Event) {
 
   try {
     const text = await file.text()
-    const didImport = importState(JSON.parse(text))
-    flashFileOp(didImport ? 'file-ok' : 'file-error')
+    importState(JSON.parse(text))
   } catch {
-    flashFileOp('file-error')
+    // malformed file — silently ignore
   }
 }
 
@@ -317,77 +280,71 @@ function downloadActiveSvg() {
           />
 
           <!-- Model group -->
-          <div class="flex items-center gap-1">
-            <span class="text-xs text-gray-500 dark:text-gray-400 mr-0.5">Model:</span>
+          <div class="inline-flex rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
             <button
               v-for="bt in (['somrig', 'bilresa'] as ButtonType[])"
               :key="bt"
               @click="setButtonType(activeSheetId, bt)"
-              class="px-2.5 py-1 rounded-md text-xs font-medium transition-colors capitalize"
+              class="px-2.5 py-1 text-xs font-medium transition-colors capitalize"
               :class="activeButtonType === bt
-                ? 'bg-blue-500 text-white'
-                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'"
+                ? 'bg-blue-600 text-white'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
             >{{ bt }}</button>
           </div>
 
           <div class="h-4 w-px bg-gray-300 dark:bg-gray-600"></div>
 
           <!-- Save / Load group -->
-          <div class="flex items-center gap-1">
+          <div class="inline-flex rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
             <button
               @click="handleSaveDesign"
-              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+              class="flex items-center gap-1 px-2.5 py-1 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               aria-label="Save design file"
               title="Save design file"
             >
-              <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiContentSave" /></svg>
+              <svg viewBox="0 0 24 24" class="w-4 h-4 fill-current"><path :d="mdiContentSave" /></svg>
               <span class="hidden md:inline">Save</span>
             </button>
             <button
               @click="handleLoadDesignClick"
-              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+              class="flex items-center gap-1 px-2.5 py-1 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l border-gray-200 dark:border-gray-700"
               aria-label="Load design file"
               title="Load design file"
             >
-              <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiFolderOpen" /></svg>
+              <svg viewBox="0 0 24 24" class="w-4 h-4 fill-current"><path :d="mdiFolderOpen" /></svg>
               <span class="hidden md:inline">Load</span>
             </button>
-            <span :title="saveIconTitle" class="flex items-center px-1">
-              <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current transition-colors" :class="saveIconClass">
-                <path :d="saveIcon" />
-              </svg>
-            </span>
           </div>
 
           <div class="h-4 w-px bg-gray-300 dark:bg-gray-600"></div>
 
           <!-- Print / Export group -->
-          <div class="flex items-center gap-1">
+          <div class="inline-flex rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
             <button
               @click="handlePrint"
-              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+              class="flex items-center gap-1 px-2.5 py-1 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               aria-label="Print sheet"
               title="Print"
             >
-              <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiPrinter" /></svg>
+              <svg viewBox="0 0 24 24" class="w-4 h-4 fill-current"><path :d="mdiPrinter" /></svg>
               <span class="hidden md:inline">Print</span>
             </button>
             <button
               @click="handlePrint"
-              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+              class="flex items-center gap-1 px-2.5 py-1 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l border-gray-200 dark:border-gray-700"
               aria-label="Save as PDF via print dialog"
               title="Save as PDF (opens print dialog)"
             >
-              <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiDownload" /></svg>
+              <svg viewBox="0 0 24 24" class="w-4 h-4 fill-current"><path :d="mdiDownload" /></svg>
               <span>PDF</span>
             </button>
             <button
               @click="downloadActiveSvg"
-              class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+              class="flex items-center gap-1 px-2.5 py-1 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l border-gray-200 dark:border-gray-700"
               aria-label="Download active button as SVG"
               title="Download SVG (physical mm dimensions, suitable for 3D printing / laser cutting)"
             >
-              <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiDownload" /></svg>
+              <svg viewBox="0 0 24 24" class="w-4 h-4 fill-current"><path :d="mdiDownload" /></svg>
               <span>SVG</span>
             </button>
           </div>
