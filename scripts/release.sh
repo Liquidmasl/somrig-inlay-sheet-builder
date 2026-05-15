@@ -18,14 +18,14 @@ NEW_VERSION=$(node -p "require('./package.json').version")
 # Collect release notes from merged PRs since last tag
 NOTES=""
 if [ -n "$LAST_TAG" ]; then
-  PR_NUMBERS=$(git log "${LAST_TAG}..HEAD" --merges --pretty=format:"%s" | grep -oP '#\d+' | tr -d '#' | sort -u)
+  PR_NUMBERS=$(git log "${LAST_TAG}..HEAD" --merges --pretty=format:"%s" | grep -oE '#[0-9]+' | tr -d '#' | sort -u)
 else
-  PR_NUMBERS=$(git log --merges --pretty=format:"%s" | grep -oP '#\d+' | tr -d '#' | sort -u)
+  PR_NUMBERS=$(git log --merges --pretty=format:"%s" | grep -oE '#[0-9]+' | tr -d '#' | sort -u)
 fi
 
 for PR in $PR_NUMBERS; do
   BODY=$(gh pr view "$PR" --json body --jq '.body' 2>/dev/null || echo "")
-  PR_NOTES=$(echo "$BODY" | sed -n '/^## Release Notes$/,/^## /p' | head -n -1 | tail -n +2)
+  PR_NOTES=$(echo "$BODY" | sed -n '/^## Release Notes$/,/^## /p' | sed '$d' | tail -n +2)
   if [ -n "$PR_NOTES" ]; then
     NOTES="${NOTES}${PR_NOTES}"$'\n'
   fi
@@ -36,12 +36,10 @@ DATE=$(date +%Y-%m-%d)
 NEW_SECTION="## [${NEW_VERSION}] - ${DATE}"$'\n\n'"${NOTES}"
 
 if [ -f CHANGELOG.md ]; then
-  # Insert new version section after the "# Changelog" header line
   TMP=$(mktemp)
-  awk -v section="$NEW_SECTION" '
-    /^# Changelog$/ { print; print ""; print section; next }
-    { print }
-  ' CHANGELOG.md > "$TMP"
+  head -1 CHANGELOG.md > "$TMP"
+  printf "\n%s\n" "$NEW_SECTION" >> "$TMP"
+  tail -n +2 CHANGELOG.md >> "$TMP"
   mv "$TMP" CHANGELOG.md
 else
   printf "# Changelog\n\n%s\n" "$NEW_SECTION" > CHANGELOG.md
