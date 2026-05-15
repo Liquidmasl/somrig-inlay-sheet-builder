@@ -1,4 +1,4 @@
-import { computed, ref, watch } from 'vue'
+import { computed, ref, toRaw, watch } from 'vue'
 import type {
   ActionType,
   ActionZone,
@@ -293,7 +293,7 @@ export function useSheets() {
     if (idx === -1) return null
 
     const sourceButton = sheet.buttons[idx]
-    const clonedButton: ButtonInlay = structuredClone(sourceButton)
+    const clonedButton: ButtonInlay = structuredClone(toRaw(sourceButton))
     clonedButton.id = `${sheetId}-btn-${nextId()}`
 
     sheet.buttons.splice(idx + 1, 0, clonedButton)
