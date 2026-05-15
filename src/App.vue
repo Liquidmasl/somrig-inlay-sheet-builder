@@ -508,14 +508,14 @@ async function downloadSheetPdfAction() {
             </button>
             <button
               @click="downloadSvgForButton(btn.id)"
-              class="absolute top-1 left-1 z-10 flex items-center gap-0.5 px-1.5 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              class="no-print absolute top-1 left-1 z-10 flex items-center gap-0.5 px-1.5 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               title="Download SVG"
               aria-label="Download SVG"
             >
               <svg viewBox="0 0 24 24" class="w-3 h-3 fill-current"><path :d="mdiDownload" /></svg>
               SVG
             </button>
-            <div class="absolute top-1 right-1 flex gap-1 z-10">
+            <div class="no-print absolute top-1 right-1 flex gap-1 z-10">
               <button
                 @click="selectButton(btn.id); handleDuplicateButton()"
                 class="w-6 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
