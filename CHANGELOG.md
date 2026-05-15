@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0] - 2026-05-16
+
+
+- **Download PDF** now produces an actual PDF file of the full sheet (all buttons, A4, 300 DPI) instead of opening the print dialog
+- **Download SVG** moved to a pill button on each button card (top-left) for clearer per-button scope
+
+
 ## [1.4.0] - 2026-04-13
 
 - **SVG download** — "Download SVG" button exports the active button inlay as an SVG file with exact physical dimensions (41.2 × 71.9 mm). The screen scale factor is stripped so the file is immediately usable in 3D printing slicers and laser cutting software.
