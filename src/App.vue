@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import {
+  mdiAlertCircle,
+  mdiCheckCircle,
   mdiChevronLeft,
   mdiChevronRight,
   mdiContentCopy,
   mdiContentSave,
+  mdiContentSaveAlert,
+  mdiContentSaveCheckOutline,
   mdiDelete,
   mdiDownload,
   mdiFolderOpen,
@@ -62,6 +66,7 @@ const {
   setButtonType,
   exportState,
   importState,
+  isDirty,
 } = useSheets()
 
 const activeButtonType = computed<ButtonType>(
@@ -74,8 +79,37 @@ const carouselRef = ref<HTMLElement | null>(null)
 const editorPanelRef = ref<HTMLElement | null>(null)
 const windowHeight = ref(window.innerHeight)
 const editorPanelHeight = ref(420) // Default fallback
-const saveLoadStatus = ref('Auto-saved in this browser')
 const importFileInput = ref<HTMLInputElement | null>(null)
+
+type FileOpStatus = 'file-ok' | 'file-error' | null
+const fileOpStatus = ref<FileOpStatus>(null)
+
+const saveIcon = computed(() => {
+  if (fileOpStatus.value === 'file-error') return mdiAlertCircle
+  if (fileOpStatus.value === 'file-ok') return mdiCheckCircle
+  return isDirty.value ? mdiContentSaveAlert : mdiContentSaveCheckOutline
+})
+const saveIconClass = computed(() => {
+  if (fileOpStatus.value === 'file-error') return 'text-red-500'
+  if (fileOpStatus.value === 'file-ok') return 'text-green-500'
+  return isDirty.value
+    ? 'text-amber-500 dark:text-amber-400'
+    : 'text-gray-400 dark:text-gray-500'
+})
+const saveIconTitle = computed(() => {
+  if (fileOpStatus.value === 'file-error') return 'Could not load file'
+  if (fileOpStatus.value === 'file-ok') return 'Operation successful'
+  return isDirty.value
+    ? 'Unsaved changes — auto-saves every 30s'
+    : 'All changes saved to browser'
+})
+
+function flashFileOp(status: FileOpStatus) {
+  fileOpStatus.value = status
+  setTimeout(() => {
+    fileOpStatus.value = null
+  }, 2000)
+}
 
 // Update window height on resize
 function updateWindowHeight() {
@@ -203,18 +237,10 @@ function handleDeleteButton() {
   if (!confirmed) return
 
   removeButton(activeSheetId.value, activeButtonId.value)
-  setSaveLoadStatus('Deleted button')
 }
 
 function handlePrint() {
   window.print()
-}
-
-function setSaveLoadStatus(message: string) {
-  saveLoadStatus.value = message
-  setTimeout(() => {
-    saveLoadStatus.value = 'Auto-saved in this browser'
-  }, 3000)
 }
 
 function downloadJsonFile(filename: string, data: unknown) {
@@ -231,7 +257,7 @@ function downloadJsonFile(filename: string, data: unknown) {
 
 function handleSaveDesign() {
   downloadJsonFile('button-design.json', exportState())
-  setSaveLoadStatus('Saved design file')
+  flashFileOp('file-ok')
 }
 
 function handleLoadDesignClick() {
@@ -247,11 +273,9 @@ async function handleLoadDesign(event: Event) {
   try {
     const text = await file.text()
     const didImport = importState(JSON.parse(text))
-    setSaveLoadStatus(
-      didImport ? 'Loaded design file' : 'Could not load this design file',
-    )
+    flashFileOp(didImport ? 'file-ok' : 'file-error')
   } catch {
-    setSaveLoadStatus('Could not load this design file')
+    flashFileOp('file-error')
   }
 }
 
@@ -351,7 +375,11 @@ function downloadActiveSvg() {
             </svg>
             <span>Delete</span>
           </button>
-          <span class="w-full sm:w-auto text-center text-xs text-gray-500 dark:text-gray-400 px-2">{{ saveLoadStatus }}</span>
+          <span :title="saveIconTitle" class="flex items-center px-1">
+            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current transition-colors" :class="saveIconClass">
+              <path :d="saveIcon" />
+            </svg>
+          </span>
           <button
             @click="handlePrint"
             class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"

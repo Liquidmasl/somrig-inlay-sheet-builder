@@ -185,9 +185,12 @@ function exportState(): PersistedState {
   }
 }
 
+const isDirty = ref(false)
+
 function persistState(): void {
   if (typeof window === 'undefined') return
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(exportState()))
+  isDirty.value = false
 }
 
 function importState(value: unknown): boolean {
@@ -199,16 +202,27 @@ function importState(value: unknown): boolean {
   activeButtonId.value = imported.activeButtonId
   _nextId = Math.max(imported.nextId, _nextId)
   persistState()
+  // The deep watch fires after this synchronous block and would re-set isDirty;
+  // reset it once watchers have flushed.
+  setTimeout(() => {
+    isDirty.value = false
+  }, 0)
   return true
 }
 
 watch(
   [sheets, activeSheetId, activeButtonId],
   () => {
-    persistState()
+    isDirty.value = true
   },
   { deep: true },
 )
+
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    if (isDirty.value) persistState()
+  }, 30_000)
+}
 
 export function useSheets() {
   const activeSheet = computed(
@@ -371,5 +385,6 @@ export function useSheets() {
     setButtonType,
     exportState,
     importState,
+    isDirty,
   }
 }
