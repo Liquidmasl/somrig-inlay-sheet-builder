@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { mdiHeart, mdiWeatherNight, mdiWeatherSunny } from '@mdi/js'
 import { ref } from 'vue'
+import { useAnalytics } from '../composables/useAnalytics'
 import { useDarkMode } from '../composables/useDarkMode'
 import DonationModal from './DonationModal.vue'
 
 const { isDark, toggle } = useDarkMode()
+const { track } = useAnalytics()
 const showDonation = ref(false)
+
+function openDonationModal() {
+  track('donation-modal-open')
+  showDonation.value = true
+}
 </script>
 
 <template>
@@ -33,7 +40,7 @@ const showDonation = ref(false)
 
       <!-- Donation button -->
       <button
-        @click="showDonation = true"
+        @click="openDonationModal"
         class="flex items-center gap-1 px-2 py-1.5 md:px-3 md:py-2 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-xs md:text-sm font-medium"
         aria-label="Support this project"
         title="Support this project"

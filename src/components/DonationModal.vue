@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { mdiClose, mdiHeart } from '@mdi/js'
+import { useAnalytics } from '../composables/useAnalytics'
 
 defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 
 const PAYPAL_DONATE_URL =
   'https://www.paypal.com/donate/?hosted_button_id=PESLSWZB9S2UG'
+
+const { track } = useAnalytics()
 </script>
 
 <template>
@@ -46,15 +49,14 @@ const PAYPAL_DONATE_URL =
 
           <!-- Heading -->
           <h2 id="donation-title" class="text-xl font-bold text-gray-900 dark:text-white text-center">
-            No ads. No tracking. Just vibes.
+            No ads. No cookies. Just vibes.
           </h2>
 
           <!-- Body text -->
           <p class="text-gray-600 dark:text-gray-400 text-center text-sm leading-relaxed">
             I hate ads as much as you do — that's why you won't find any here.
             If this tool saved you some time (or just made you smile), a small donation
-            sends me a little dopamine and helps offset my
-            <span class="text-orange-500 font-medium">insane Claude token costs</span>.
+            sends me a little dopamine.
             No pressure, truly — but if you feel like it&nbsp;:)
           </p>
 
@@ -64,6 +66,7 @@ const PAYPAL_DONATE_URL =
             target="_blank"
             rel="noopener noreferrer"
             class="group flex items-center gap-3 px-6 py-3 rounded-xl bg-[#0070BA] hover:bg-[#005EA6] active:bg-[#004A87] text-white font-semibold text-sm transition-colors shadow-md hover:shadow-lg"
+            @click="track('donation-click')"
           >
             <!-- PayPal wordmark (inline SVG path) -->
             <svg

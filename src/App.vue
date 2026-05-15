@@ -17,6 +17,7 @@ import ButtonInlaySVG, {
   type IndicatorType,
   type ZoneConfig,
 } from './components/ButtonInlaySVG.vue'
+import { useAnalytics } from './composables/useAnalytics'
 import { useDarkMode } from './composables/useDarkMode'
 import { usePdfDownload } from './composables/usePdfDownload'
 import { useSheets } from './composables/useSheets'
@@ -206,6 +207,7 @@ function handleDeleteButton() {
 }
 
 function handlePrint() {
+  if (activeSheet.value) trackSheetEvent('print', activeSheet.value)
   window.print()
 }
 
@@ -222,6 +224,7 @@ function downloadJsonFile(filename: string, data: unknown) {
 }
 
 function handleSaveDesign() {
+  track('save-design')
   downloadJsonFile('button-design.json', exportState())
 }
 
@@ -238,6 +241,7 @@ async function handleLoadDesign(event: Event) {
   try {
     const text = await file.text()
     importState(JSON.parse(text))
+    track('load-design')
   } catch {
     // malformed file — silently ignore
   }
@@ -245,6 +249,7 @@ async function handleLoadDesign(event: Event) {
 
 const { downloadButtonSvg } = useSvgDownload()
 const { downloadSheetPdf } = usePdfDownload()
+const { track, trackSheetEvent } = useAnalytics()
 
 // DOM element refs for desktop grid cards, keyed by button ID.
 // Desktop grid is always in the DOM (hidden md:flex), so cardRefs works on any viewport.
@@ -261,10 +266,12 @@ function downloadSvgForButton(buttonId: string) {
   if (!svg) return
   const index =
     activeSheet.value?.buttons.findIndex((b) => b.id === buttonId) ?? 0
+  track('svg-download')
   downloadButtonSvg(svg, `button-inlay-${index + 1}.svg`)
 }
 
 async function downloadSheetPdfAction() {
+  if (activeSheet.value) trackSheetEvent('pdf-download', activeSheet.value)
   const svgs = (activeSheet.value?.buttons ?? [])
     .map((btn) => getSvgForButton(btn.id))
     .filter((svg): svg is SVGSVGElement => svg !== null)
