@@ -306,22 +306,8 @@ function downloadActiveSvg() {
     <!-- Main content area -->
     <main class="flex-1 overflow-auto pt-4 md:pb-[420px] md:pb-72">
       <div class=" mx-auto">
-        <!-- Button model selector -->
-        <div class="flex items-center justify-center gap-1 mb-2">
-          <span class="text-xs text-gray-500 dark:text-gray-400 mr-1">Model:</span>
-          <button
-            v-for="bt in (['somrig', 'bilresa'] as ButtonType[])"
-            :key="bt"
-            @click="setButtonType(activeSheetId, bt)"
-            class="px-2.5 py-1 rounded-md text-xs font-medium transition-colors capitalize"
-            :class="activeButtonType === bt
-              ? 'bg-blue-500 text-white'
-              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'"
-          >{{ bt }}</button>
-        </div>
-
-        <!-- Print/Download buttons -->
-        <div class="flex flex-wrap items-center justify-center gap-2 mb-3">
+        <!-- Toolbar: model | save/load | print/export -->
+        <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 mb-3">
           <input
             ref="importFileInput"
             type="file"
@@ -329,90 +315,82 @@ function downloadActiveSvg() {
             class="hidden"
             @change="handleLoadDesign"
           />
-          <button
-            @click="handleSaveDesign"
-            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
-            aria-label="Save design file"
-            title="Save design file"
-          >
-            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
-              <path :d="mdiContentSave" />
-            </svg>
-            <span>Save</span>
-          </button>
-          <button
-            @click="handleLoadDesignClick"
-            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
-            aria-label="Load design file"
-            title="Load design file"
-          >
-            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
-              <path :d="mdiFolderOpen" />
-            </svg>
-            <span>Load</span>
-          </button>
-          <button
-            @click="handleDuplicateButton"
-            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-            :disabled="!activeButtonId"
-            aria-label="Duplicate active button"
-            title="Duplicate active button"
-          >
-            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
-              <path :d="mdiContentCopy" />
-            </svg>
-            <span>Duplicate</span>
-          </button>
-          <button
-            @click="handleDeleteButton"
-            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-            :disabled="!activeButtonId"
-            aria-label="Delete active button"
-            title="Delete active button"
-          >
-            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
-              <path :d="mdiDelete" />
-            </svg>
-            <span>Delete</span>
-          </button>
-          <span :title="saveIconTitle" class="flex items-center px-1">
-            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current transition-colors" :class="saveIconClass">
-              <path :d="saveIcon" />
-            </svg>
-          </span>
-          <button
-            @click="handlePrint"
-            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
-            aria-label="Print sheet"
-            title="Print"
-          >
-            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
-              <path :d="mdiPrinter" />
-            </svg>
-            <span>Print</span>
-          </button>
-          <button
-            @click="handlePrint"
-            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
-            aria-label="Download as PDF"
-            title="Download PDF"
-          >
-            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
-              <path :d="mdiDownload" />
-            </svg>
-            <span>Download PDF</span>
-          </button>
-          <button
-            @click="downloadActiveSvg"
-            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
-            aria-label="Download active button as SVG"
-            title="Download SVG (physical mm dimensions, suitable for 3D printing / laser cutting)"
-          >
-            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
-              <path :d="mdiDownload" />
-            </svg>
-            <span>Download SVG</span>
-          </button>
+
+          <!-- Model group -->
+          <div class="flex items-center gap-1">
+            <span class="text-xs text-gray-500 dark:text-gray-400 mr-0.5">Model:</span>
+            <button
+              v-for="bt in (['somrig', 'bilresa'] as ButtonType[])"
+              :key="bt"
+              @click="setButtonType(activeSheetId, bt)"
+              class="px-2.5 py-1 rounded-md text-xs font-medium transition-colors capitalize"
+              :class="activeButtonType === bt
+                ? 'bg-blue-500 text-white'
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'"
+            >{{ bt }}</button>
+          </div>
+
+          <div class="h-4 w-px bg-gray-300 dark:bg-gray-600"></div>
+
+          <!-- Save / Load group -->
+          <div class="flex items-center gap-1">
+            <button
+              @click="handleSaveDesign"
+              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+              aria-label="Save design file"
+              title="Save design file"
+            >
+              <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiContentSave" /></svg>
+              <span>Save</span>
+            </button>
+            <button
+              @click="handleLoadDesignClick"
+              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+              aria-label="Load design file"
+              title="Load design file"
+            >
+              <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiFolderOpen" /></svg>
+              <span>Load</span>
+            </button>
+            <span :title="saveIconTitle" class="flex items-center px-1">
+              <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current transition-colors" :class="saveIconClass">
+                <path :d="saveIcon" />
+              </svg>
+            </span>
+          </div>
+
+          <div class="h-4 w-px bg-gray-300 dark:bg-gray-600"></div>
+
+          <!-- Print / Download group -->
+          <div class="flex items-center gap-1">
+            <button
+              @click="handlePrint"
+              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+              aria-label="Print sheet"
+              title="Print"
+            >
+              <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiPrinter" /></svg>
+              <span>Print</span>
+            </button>
+            <button
+              @click="handlePrint"
+              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+              aria-label="Download as PDF"
+              title="Download PDF"
+            >
+              <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiDownload" /></svg>
+              <span>Download PDF</span>
+            </button>
+            <button
+              @click="downloadActiveSvg"
+              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+              aria-label="Download active button as SVG"
+              title="Download SVG (physical mm dimensions, suitable for 3D printing / laser cutting)"
+            >
+              <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path :d="mdiDownload" /></svg>
+              <span>Download SVG</span>
+            </button>
+          </div>
         </div>
 
         <!-- Mobile: Carousel with centered button and arrows -->
@@ -421,32 +399,54 @@ function downloadActiveSvg() {
           <div ref="carouselRef" class="pt-1 pb-1 overflow-x-auto snap-x snap-mandatory scroll-smooth" style="scrollbar-width: none; -ms-overflow-style: none;">
             <div class="flex items-center justify-start" :style="`padding-left: calc(50vw - ${buttonDims.W}mm * ${previewScale} / 2 - 8px); padding-right: calc(50vw - ${buttonDims.W}mm * ${previewScale} / 2 - 8px); gap: calc((100vw - (1.5 * ((${buttonDims.W}mm * ${previewScale}) + 16px) ))/2)`">
               <!-- Button cards -->
-              <button
+              <div
                 v-for="btn in activeSheet?.buttons"
                 :key="btn.id"
-                class="button-card flex-shrink-0 snap-center rounded-xl p-2 transition-all focus:outline-none"
-                :class="
-                  activeButtonId === btn.id
-                    ? 'bg-white dark:bg-gray-900 ring-2 ring-blue-500 shadow-lg scale-100'
-                    : 'bg-white dark:bg-gray-900 shadow-md opacity-60 scale-95'
-                "
-                @click="selectButton(btn.id)"
+                class="relative flex-shrink-0 snap-center"
               >
-                <ButtonInlaySVG
-                  :button-type="activeButtonType"
-                  :top-zones="(btn.top.zones.length as 1 | 2 | 3)"
-                  :bot-zones="(btn.bottom.zones.length as 1 | 2 | 3)"
-                  :top-zone-config="toZoneConfigs(btn.top.zones)"
-                  :bot-zone-config="toZoneConfigs(btn.bottom.zones)"
-                  :top-indicator-pos="btn.top.indicatorPosition"
-                  :bot-indicator-pos="btn.bottom.indicatorPosition"
-                  :horizontal-separator="btn.horizontalSeparator"
-                  :vertical-separator="btn.verticalSeparator"
-                  :stroke-color="strokeColor"
-                  :fill-color="fillColor"
-                  :scale="previewScale"
-                />
-              </button>
+                <button
+                  class="button-card block rounded-xl p-2 transition-all focus:outline-none"
+                  :class="
+                    activeButtonId === btn.id
+                      ? 'bg-white dark:bg-gray-900 ring-2 ring-blue-500 shadow-lg scale-100'
+                      : 'bg-white dark:bg-gray-900 shadow-md opacity-60 scale-95'
+                  "
+                  @click="selectButton(btn.id)"
+                >
+                  <ButtonInlaySVG
+                    :button-type="activeButtonType"
+                    :top-zones="(btn.top.zones.length as 1 | 2 | 3)"
+                    :bot-zones="(btn.bottom.zones.length as 1 | 2 | 3)"
+                    :top-zone-config="toZoneConfigs(btn.top.zones)"
+                    :bot-zone-config="toZoneConfigs(btn.bottom.zones)"
+                    :top-indicator-pos="btn.top.indicatorPosition"
+                    :bot-indicator-pos="btn.bottom.indicatorPosition"
+                    :horizontal-separator="btn.horizontalSeparator"
+                    :vertical-separator="btn.verticalSeparator"
+                    :stroke-color="strokeColor"
+                    :fill-color="fillColor"
+                    :scale="previewScale"
+                  />
+                </button>
+                <div v-if="activeButtonId === btn.id" class="absolute top-1 right-1 flex gap-1 z-10">
+                  <button
+                    @click="handleDuplicateButton"
+                    class="w-6 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    title="Duplicate button"
+                    aria-label="Duplicate button"
+                  >
+                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 fill-current"><path :d="mdiContentCopy" /></svg>
+                  </button>
+                  <button
+                    @click="handleDeleteButton"
+                    class="w-6 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
+                    title="Delete button"
+                    aria-label="Delete button"
+                  >
+                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 fill-current"><path :d="mdiDelete" /></svg>
+                  </button>
+                </div>
+              </div>
 
               <!-- Add button card -->
               <button
@@ -507,34 +507,56 @@ function downloadActiveSvg() {
 
         <!-- Desktop: All buttons in grid -->
         <div id="print-area" class="hidden md:flex flex-wrap gap-5 items-start justify-center">
-          <button
+          <div
             v-for="btn in activeSheet?.buttons"
             :key="btn.id"
-            :ref="(el) => { if (el) cardRefs[btn.id] = el as Element; else delete cardRefs[btn.id] }"
-            class="relative rounded-xl p-2 transition-all focus:outline-none bg-white dark:bg-gray-900"
-            :class="
-              activeButtonId === btn.id
-                ? 'ring-2 ring-blue-500 shadow-lg'
-                : 'hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 shadow-md hover:shadow-lg'
-            "
-            :aria-label="`Select button ${btn.id}`"
-            @click="selectButton(btn.id)"
+            class="relative"
           >
-            <ButtonInlaySVG
-              :button-type="activeButtonType"
-              :top-zones="(btn.top.zones.length as 1 | 2 | 3)"
-              :bot-zones="(btn.bottom.zones.length as 1 | 2 | 3)"
-              :top-zone-config="toZoneConfigs(btn.top.zones)"
-              :bot-zone-config="toZoneConfigs(btn.bottom.zones)"
-              :top-indicator-pos="btn.top.indicatorPosition"
-              :bot-indicator-pos="btn.bottom.indicatorPosition"
-              :horizontal-separator="btn.horizontalSeparator"
-              :vertical-separator="btn.verticalSeparator"
-              :stroke-color="strokeColor"
-              :fill-color="fillColor"
-              :scale="previewScale"
-            />
-          </button>
+            <button
+              :ref="(el) => { if (el) cardRefs[btn.id] = el as Element; else delete cardRefs[btn.id] }"
+              class="block rounded-xl p-2 transition-all focus:outline-none bg-white dark:bg-gray-900"
+              :class="
+                activeButtonId === btn.id
+                  ? 'ring-2 ring-blue-500 shadow-lg'
+                  : 'hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 shadow-md hover:shadow-lg'
+              "
+              :aria-label="`Select button ${btn.id}`"
+              @click="selectButton(btn.id)"
+            >
+              <ButtonInlaySVG
+                :button-type="activeButtonType"
+                :top-zones="(btn.top.zones.length as 1 | 2 | 3)"
+                :bot-zones="(btn.bottom.zones.length as 1 | 2 | 3)"
+                :top-zone-config="toZoneConfigs(btn.top.zones)"
+                :bot-zone-config="toZoneConfigs(btn.bottom.zones)"
+                :top-indicator-pos="btn.top.indicatorPosition"
+                :bot-indicator-pos="btn.bottom.indicatorPosition"
+                :horizontal-separator="btn.horizontalSeparator"
+                :vertical-separator="btn.verticalSeparator"
+                :stroke-color="strokeColor"
+                :fill-color="fillColor"
+                :scale="previewScale"
+              />
+            </button>
+            <div v-if="activeButtonId === btn.id" class="absolute top-1 right-1 flex gap-1 z-10">
+              <button
+                @click="handleDuplicateButton"
+                class="w-6 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                title="Duplicate button"
+                aria-label="Duplicate button"
+              >
+                <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 fill-current"><path :d="mdiContentCopy" /></svg>
+              </button>
+              <button
+                @click="handleDeleteButton"
+                class="w-6 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
+                title="Delete button"
+                aria-label="Delete button"
+              >
+                <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 fill-current"><path :d="mdiDelete" /></svg>
+              </button>
+            </div>
+          </div>
 
           <!-- Add button -->
           <button
