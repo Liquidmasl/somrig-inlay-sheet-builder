@@ -48,7 +48,7 @@ fi
 # Create release branch and PR
 BRANCH="release/v${NEW_VERSION}"
 git checkout -b "$BRANCH"
-git add package.json CHANGELOG.md
+git add package.json package-lock.json CHANGELOG.md
 git commit -m "release: v${NEW_VERSION}"
 git push -u origin "$BRANCH"
 
