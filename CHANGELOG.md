@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.1] - 2026-05-16
+
+
+- Adds anonymous, cookieless usage analytics (Umami, `*.marcel1.com` only) to track feature usage and donation funnel
+
+
 ## [1.5.0] - 2026-05-16
 
 
