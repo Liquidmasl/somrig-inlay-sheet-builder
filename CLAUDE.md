@@ -98,30 +98,23 @@ Future PRs should run `npm run screenshot` and attach relevant screenshots to th
 
 ## Release Workflow
 
-Follows the same PR-based changelog pattern as LQM-64.
-
 > **HARD RULE — never violated:**
-> Feature branches (and any non-release branch) **MUST NOT** touch `CHANGELOG.md` or `package.json` version. Violating this breaks the automated release pipeline.
-> The changelog is managed exclusively by `scripts/release.sh` on release branches.
+> Feature branches **MUST NOT** touch `CHANGELOG.md` or `package.json` version. The release workflow manages these exclusively.
 
-**For user-facing changes:** add a `## Release Notes` section to your PR body (see `.github/pull_request_template.md`). The release script extracts these sections to build the changelog automatically.
+**For user-facing changes:** add a `## Release Notes` section to your PR body. The release workflow extracts these sections to build the changelog automatically.
 
-**To fire a release**, tell Cyrus: "release a patch/minor/major". Cyrus will run:
+**To fire a release:** go to **GitHub → Actions → Release → Run workflow**, pick `patch`, `minor`, or `major`, and run it on `main`. That's it.
 
-```bash
-git checkout main && git pull
-./scripts/release.sh <patch|minor|major>
-```
+The workflow:
+1. Bumps `package.json` / `package-lock.json` version
+2. Collects `## Release Notes` sections from merged PRs since the last tag
+3. Prepends a new entry to `CHANGELOG.md`
+4. Builds the app
+5. Commits the version bump directly to `main`
+6. Creates a git tag and GitHub Release
+7. Deploys to Netlify
 
-This creates a `release/vX.Y.Z` branch + PR with auto-generated changelog from merged PR bodies.
-
-**On merge of a release PR**, `.github/workflows/release.yml` automatically:
-1. Builds the app
-2. Creates a git tag
-3. Creates a GitHub Release with changelog notes
-4. Deploys to Netlify (uses `environment: prod` — secrets `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID` must be in the `prod` GitHub environment)
-
-**Required GitHub environment (prod):**
+**Required GitHub environment (`prod`):**
 - `NETLIFY_AUTH_TOKEN` — Netlify personal access token
 - `NETLIFY_SITE_ID` — `6285caf2-813a-4ad5-8ca8-4b486f32b147`
 
