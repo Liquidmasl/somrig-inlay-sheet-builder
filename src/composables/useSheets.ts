@@ -334,7 +334,7 @@ export function useSheets() {
     const phys = half === 'top' ? button.top : button.bottom
     const current = phys.zones
     phys.zones = Array.from({ length: count }, (_, i) => {
-      if (i < current.length) return current[i]
+      if (i < current.length) return toRaw(current[i])
       return createDefaultZone(DEFAULT_ZONE_TYPES[i] ?? 'single')
     })
   }
