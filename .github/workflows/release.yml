@@ -1,13 +1,19 @@
 name: Release
 
 on:
-  pull_request:
-    types: [closed]
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump type
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
   release:
-    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/')
     runs-on: ubuntu-latest
     environment: prod
     permissions:
@@ -15,6 +21,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -25,23 +33,63 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        run: npm run build
+      - name: Bump version
+        run: npm version ${{ github.event.inputs.bump }} --no-git-tag-version
 
-      - name: Extract version
+      - name: Get new version
         id: version
         run: echo "version=v$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
-      - name: Extract changelog for this version
-        id: changelog
+      - name: Collect release notes from merged PRs
+        id: notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          NOTES=$(sed -n "/^## \[${VERSION}\]/,/^## \[/p" CHANGELOG.md | head -n -1 | tail -n +2)
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          NOTES=""
+          if [ -n "$LAST_TAG" ]; then
+            PR_NUMBERS=$(git log "${LAST_TAG}..HEAD" --merges --pretty=format:"%s" | grep -oE '#[0-9]+' | tr -d '#' | sort -u)
+          else
+            PR_NUMBERS=$(git log --merges --pretty=format:"%s" | grep -oE '#[0-9]+' | tr -d '#' | sort -u)
+          fi
+          for PR in $PR_NUMBERS; do
+            BODY=$(gh pr view "$PR" --json body --jq '.body' 2>/dev/null || echo "")
+            PR_NOTES=$(echo "$BODY" | sed -n '/^## Release Notes$/,/^## /p' | sed '$d' | tail -n +2)
+            if [ -n "$PR_NOTES" ]; then
+              NOTES="${NOTES}${PR_NOTES}"$'\n'
+            fi
+          done
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo "$NOTES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Create tag
+      - name: Update CHANGELOG.md
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          DATE=$(date +%Y-%m-%d)
+          NEW_SECTION="## [${VERSION}] - ${DATE}"$'\n\n'"${{ steps.notes.outputs.notes }}"
+          if [ -f CHANGELOG.md ]; then
+            TMP=$(mktemp)
+            head -1 CHANGELOG.md > "$TMP"
+            printf "\n%s\n" "$NEW_SECTION" >> "$TMP"
+            tail -n +2 CHANGELOG.md >> "$TMP"
+            mv "$TMP" CHANGELOG.md
+          else
+            printf "# Changelog\n\n%s\n" "$NEW_SECTION" > CHANGELOG.md
+          fi
+
+      - name: Build
+        run: npm run build
+
+      - name: Commit and push version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json CHANGELOG.md
+          git commit -m "release: ${{ steps.version.outputs.version }}"
+          git push origin main
+
+      - name: Tag and push
         run: |
           git tag ${{ steps.version.outputs.version }}
           git push origin ${{ steps.version.outputs.version }}
@@ -50,7 +98,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
-          body: ${{ steps.changelog.outputs.notes }}
+          body: ${{ steps.notes.outputs.notes }}
 
       - name: Deploy to Netlify
         run: npx netlify-cli@latest deploy --prod --dir=dist
