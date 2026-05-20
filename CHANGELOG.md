@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.3] - 2026-05-21
+
+
+Bug fix: duplicate button now works correctly after adding or removing zones (was broken without a page refresh).
+
+
 ## [1.5.2] - 2026-05-16
 
 
