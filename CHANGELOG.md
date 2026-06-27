@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.0.0] - 2026-06-27
+
+
+- Added 3MF export for multi-colour 3D printing — works with Bambu Studio and PrusaSlicer; plate and icon layer are grouped as one object so they move and scale together in the slicer
+- 3MF files are pre-oriented face-down on the build plate
+- Icon layer includes all visual elements: icons, indicators, labels, and zone separators
+- Bilresa button type now supported alongside Somrig
+
+
 ## [1.5.4] - 2026-05-20
 
 
