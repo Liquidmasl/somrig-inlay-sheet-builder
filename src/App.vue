@@ -21,6 +21,7 @@ import ButtonInlaySVG, {
 import { use3mfDownload } from './composables/use3mfDownload'
 import { useAnalytics } from './composables/useAnalytics'
 import { useDarkMode } from './composables/useDarkMode'
+import { useDonationPrompt } from './composables/useDonationPrompt'
 import { usePdfDownload } from './composables/usePdfDownload'
 import { useSheets } from './composables/useSheets'
 import { useSvgDownload } from './composables/useSvgDownload'
@@ -210,6 +211,7 @@ function handleDeleteButton() {
 
 function handlePrint() {
   if (activeSheet.value) trackSheetEvent('print', activeSheet.value)
+  recordSheetAction()
   window.print()
 }
 
@@ -227,6 +229,7 @@ function downloadJsonFile(filename: string, data: unknown) {
 
 function handleSaveDesign() {
   track('save-design')
+  recordSheetAction()
   downloadJsonFile('button-design.json', exportState())
 }
 
@@ -253,6 +256,7 @@ const { downloadButtonSvg } = useSvgDownload()
 const { download3mf } = use3mfDownload()
 const { downloadSheetPdf } = usePdfDownload()
 const { track, trackSheetEvent } = useAnalytics()
+const { recordDownload, recordSheetAction } = useDonationPrompt()
 
 // DOM element refs for desktop grid cards, keyed by button ID.
 // Desktop grid is always in the DOM (hidden md:flex), so cardRefs works on any viewport.
@@ -270,6 +274,7 @@ function downloadSvgForButton(buttonId: string) {
   const index =
     activeSheet.value?.buttons.findIndex((b) => b.id === buttonId) ?? 0
   track('svg-download')
+  recordDownload('svg')
   downloadButtonSvg(svg, `button-inlay-${index + 1}.svg`)
 }
 
@@ -279,6 +284,7 @@ async function download3mfForButton(buttonId: string) {
   const index =
     activeSheet.value?.buttons.findIndex((b) => b.id === buttonId) ?? 0
   track('3mf-download')
+  recordDownload('3mf')
   await download3mf(
     svg,
     activeButtonType.value,
@@ -288,6 +294,7 @@ async function download3mfForButton(buttonId: string) {
 
 async function downloadSheetPdfAction() {
   if (activeSheet.value) trackSheetEvent('pdf-download', activeSheet.value)
+  recordSheetAction()
   const svgs = (activeSheet.value?.buttons ?? [])
     .map((btn) => getSvgForButton(btn.id))
     .filter((svg): svg is SVGSVGElement => svg !== null)
