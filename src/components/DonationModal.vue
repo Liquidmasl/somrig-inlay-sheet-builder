@@ -1,14 +1,28 @@
 <script setup lang="ts">
-import { mdiClose, mdiHeart } from '@mdi/js'
+import { mdiClose, mdiHeart, mdiPrinter3d } from '@mdi/js'
 import { useAnalytics } from '../composables/useAnalytics'
 
-defineProps<{ open: boolean }>()
-const emit = defineEmits<{ close: [] }>()
+defineProps<{ open: boolean; show3dPrint?: boolean }>()
+const emit = defineEmits<{ close: []; support: [] }>()
 
 const PAYPAL_DONATE_URL =
   'https://www.paypal.com/donate/?hosted_button_id=PESLSWZB9S2UG'
 
+const MAKERWORLD_BOOST_URL = 'https://makerworld.com/en/@liquidmasl'
+
+// Served from public/ at runtime (bound, so the bundler doesn't try to resolve it).
+// TODO(marcel): drop the real prototype photo at public/prototype-prints.jpg, then
+// re-enable the <img> in the 3D-print section below.
+// const PROTOTYPE_IMAGE_URL = '/prototype-prints.jpg'
+
 const { track } = useAnalytics()
+
+// Any support click counts as engagement: track it and let the parent mute the
+// auto-popup for a week.
+function onSupport(event = 'donation-click') {
+  track(event)
+  emit('support')
+}
 </script>
 
 <template>
@@ -67,7 +81,7 @@ const { track } = useAnalytics()
             target="_blank"
             rel="noopener noreferrer"
             class="group flex items-stretch rounded-xl overflow-hidden bg-[#0070BA] hover:bg-[#005EA6] active:bg-[#004A87] text-white font-semibold text-sm transition-colors shadow-md hover:shadow-lg"
-            @click="track('donation-click')"
+            @click="onSupport()"
           >
             <span class="flex items-center bg-white px-3">
               <!-- Official 2024 PayPal monogram (from PayPal's brand package) -->
@@ -82,7 +96,7 @@ const { track } = useAnalytics()
             target="_blank"
             rel="noopener noreferrer"
             class="transition-transform hover:scale-[1.03]"
-            @click="track('donation-click')"
+            @click="onSupport()"
           >
             <img
               src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=liquidmasl&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff"
@@ -94,6 +108,55 @@ const { track } = useAnalytics()
           <p class="text-xs text-gray-400 dark:text-gray-600 text-center">
             You'll be redirected to an external page. Every amount helps!
           </p>
+
+          <!-- 3D-print variant: extra context + free Makerworld boost, only shown
+               once the user has actually downloaded a 3mf -->
+          <template v-if="show3dPrint">
+            <div class="w-full border-t border-gray-200 dark:border-gray-800 pt-5 flex flex-col items-center gap-4">
+              <div class="flex items-center gap-2 text-gray-900 dark:text-white">
+                <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
+                  <path :d="mdiPrinter3d" />
+                </svg>
+                <h3 class="font-semibold text-base">Printing these yourself?</h3>
+              </div>
+
+              <p class="text-gray-600 dark:text-gray-400 text-center text-sm leading-relaxed">
+                Modelling, measuring and dialling these inlays in for a great fit and
+                feel without breakage took a stack of prototypes, a lot of failed prints
+                and a fair bit of filament to get right. If they save you that hassle,
+                a boost or a coffee means a lot.
+              </p>
+
+              <p class="text-gray-600 dark:text-gray-400 text-center text-sm leading-relaxed">
+                Heads up: models you download here don't earn me any Makerworld points —
+                I didn't want to break your workflow just to chase them. So if you'd like
+                to support me for free, please boost any (or several!) of my models over
+                on Makerworld instead&nbsp;:)
+              </p>
+
+              <!-- TODO(marcel): re-enable once public/prototype-prints.jpg exists
+              <img
+                :src="PROTOTYPE_IMAGE_URL"
+                alt="Prototype 3D prints"
+                class="w-full rounded-xl shadow-md object-cover"
+              />
+              -->
+
+              <!-- Free Makerworld boost — costs the user nothing -->
+              <a
+                :href="MAKERWORLD_BOOST_URL"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex items-center gap-2 rounded-xl px-5 py-3 bg-[#00AE42] hover:bg-[#009939] active:bg-[#00822F] text-white font-semibold text-sm transition-colors shadow-md hover:shadow-lg"
+                @click="onSupport('makerworld-boost-click')"
+              >
+                <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
+                  <path :d="mdiPrinter3d" />
+                </svg>
+                Boost me for free on Makerworld!
+              </a>
+            </div>
+          </template>
         </div>
       </div>
     </Transition>

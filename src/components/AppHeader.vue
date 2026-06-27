@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { mdiHeart, mdiWeatherNight, mdiWeatherSunny } from '@mdi/js'
-import { ref } from 'vue'
 import { useAnalytics } from '../composables/useAnalytics'
 import { useDarkMode } from '../composables/useDarkMode'
+import { useDonationPrompt } from '../composables/useDonationPrompt'
 import DonationModal from './DonationModal.vue'
 
 const { isDark, toggle } = useDarkMode()
 const { track } = useAnalytics()
-const showDonation = ref(false)
+const { isOpen, show3dPrint, openManually, close, mute } = useDonationPrompt()
 
 function openDonationModal() {
   track('donation-modal-open')
-  showDonation.value = true
+  openManually()
 }
 </script>
 
@@ -70,5 +70,10 @@ function openDonationModal() {
     </div>
   </header>
 
-  <DonationModal :open="showDonation" @close="showDonation = false" />
+  <DonationModal
+    :open="isOpen"
+    :show3d-print="show3dPrint"
+    @close="close"
+    @support="mute"
+  />
 </template>
