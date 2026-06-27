@@ -9,6 +9,7 @@ import {
   mdiFolderOpen,
   mdiPlus,
   mdiPrinter,
+  mdiPrinter3d,
 } from '@mdi/js'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import AppHeader from './components/AppHeader.vue'
@@ -17,8 +18,10 @@ import ButtonInlaySVG, {
   type IndicatorType,
   type ZoneConfig,
 } from './components/ButtonInlaySVG.vue'
+import { use3mfDownload } from './composables/use3mfDownload'
 import { useAnalytics } from './composables/useAnalytics'
 import { useDarkMode } from './composables/useDarkMode'
+import { useDonationPrompt } from './composables/useDonationPrompt'
 import { usePdfDownload } from './composables/usePdfDownload'
 import { useSheets } from './composables/useSheets'
 import { useSvgDownload } from './composables/useSvgDownload'
@@ -208,6 +211,7 @@ function handleDeleteButton() {
 
 function handlePrint() {
   if (activeSheet.value) trackSheetEvent('print', activeSheet.value)
+  recordSheetAction()
   window.print()
 }
 
@@ -225,6 +229,7 @@ function downloadJsonFile(filename: string, data: unknown) {
 
 function handleSaveDesign() {
   track('save-design')
+  recordSheetAction()
   downloadJsonFile('button-design.json', exportState())
 }
 
@@ -248,8 +253,10 @@ async function handleLoadDesign(event: Event) {
 }
 
 const { downloadButtonSvg } = useSvgDownload()
+const { download3mf } = use3mfDownload()
 const { downloadSheetPdf } = usePdfDownload()
 const { track, trackSheetEvent } = useAnalytics()
+const { recordDownload, recordSheetAction } = useDonationPrompt()
 
 // DOM element refs for desktop grid cards, keyed by button ID.
 // Desktop grid is always in the DOM (hidden md:flex), so cardRefs works on any viewport.
@@ -267,11 +274,27 @@ function downloadSvgForButton(buttonId: string) {
   const index =
     activeSheet.value?.buttons.findIndex((b) => b.id === buttonId) ?? 0
   track('svg-download')
+  recordDownload('svg')
   downloadButtonSvg(svg, `button-inlay-${index + 1}.svg`)
+}
+
+async function download3mfForButton(buttonId: string) {
+  const svg = getSvgForButton(buttonId)
+  if (!svg) return
+  const index =
+    activeSheet.value?.buttons.findIndex((b) => b.id === buttonId) ?? 0
+  track('3mf-download')
+  recordDownload('3mf')
+  await download3mf(
+    svg,
+    activeButtonType.value,
+    `button-inlay-${index + 1}.3mf`,
+  )
 }
 
 async function downloadSheetPdfAction() {
   if (activeSheet.value) trackSheetEvent('pdf-download', activeSheet.value)
+  recordSheetAction()
   const svgs = (activeSheet.value?.buttons ?? [])
     .map((btn) => getSvgForButton(btn.id))
     .filter((svg): svg is SVGSVGElement => svg !== null)
@@ -393,16 +416,26 @@ async function downloadSheetPdfAction() {
                     :scale="previewScale"
                   />
                 </button>
-                <button
-                  v-if="activeButtonId === btn.id"
-                  @click="downloadSvgForButton(btn.id)"
-                  class="absolute top-1 left-1 z-10 flex items-center gap-0.5 px-1.5 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  title="Download SVG"
-                  aria-label="Download SVG"
-                >
-                  <svg viewBox="0 0 24 24" class="w-3 h-3 fill-current"><path :d="mdiDownload" /></svg>
-                  SVG
-                </button>
+                <div v-if="activeButtonId === btn.id" class="absolute top-1 left-1 flex gap-1 z-10">
+                  <button
+                    @click="downloadSvgForButton(btn.id)"
+                    class="flex items-center gap-0.5 px-1.5 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    title="Download SVG"
+                    aria-label="Download SVG"
+                  >
+                    <svg viewBox="0 0 24 24" class="w-3 h-3 fill-current"><path :d="mdiDownload" /></svg>
+                    SVG
+                  </button>
+                  <button
+                    @click="download3mfForButton(btn.id)"
+                    class="flex items-center gap-0.5 px-1.5 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    title="Download 3MF (plate + icon layer, ready for Bambu Studio multi-colour)"
+                    aria-label="Download 3MF"
+                  >
+                    <svg viewBox="0 0 24 24" class="w-3 h-3 fill-current"><path :d="mdiPrinter3d" /></svg>
+                    3MF
+                  </button>
+                </div>
                 <div v-if="activeButtonId === btn.id" class="absolute top-1 right-1 flex gap-1 z-10">
                   <button
                     @click="handleDuplicateButton"
@@ -513,15 +546,26 @@ async function downloadSheetPdfAction() {
                 :scale="previewScale"
               />
             </button>
-            <button
-              @click="downloadSvgForButton(btn.id)"
-              class="no-print absolute top-1 left-1 z-10 flex items-center gap-0.5 px-1.5 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              title="Download SVG"
-              aria-label="Download SVG"
-            >
-              <svg viewBox="0 0 24 24" class="w-3 h-3 fill-current"><path :d="mdiDownload" /></svg>
-              SVG
-            </button>
+            <div class="no-print absolute top-1 left-1 flex gap-1 z-10">
+              <button
+                @click="downloadSvgForButton(btn.id)"
+                class="flex items-center gap-0.5 px-1.5 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                title="Download SVG"
+                aria-label="Download SVG"
+              >
+                <svg viewBox="0 0 24 24" class="w-3 h-3 fill-current"><path :d="mdiDownload" /></svg>
+                SVG
+              </button>
+              <button
+                @click="download3mfForButton(btn.id)"
+                class="flex items-center gap-0.5 px-1.5 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                title="Download 3MF (plate + icon layer, ready for Bambu Studio multi-colour)"
+                aria-label="Download 3MF"
+              >
+                <svg viewBox="0 0 24 24" class="w-3 h-3 fill-current"><path :d="mdiPrinter3d" /></svg>
+                3MF
+              </button>
+            </div>
             <div class="no-print absolute top-1 right-1 flex gap-1 z-10">
               <button
                 @click="selectButton(btn.id); handleDuplicateButton()"

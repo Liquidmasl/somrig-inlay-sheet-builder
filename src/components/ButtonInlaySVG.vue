@@ -625,6 +625,7 @@ function computeLabelY(zone: Zone, cfg: ZoneConfig): number {
           :y="computeLabelY(zone, topZoneConfig[i])"
           text-anchor="middle"
           dominant-baseline="central"
+          font-family="'DejaVu Sans', sans-serif"
           :font-size="topZoneConfig[i].labelSize ?? 3"
           :fill="topZoneConfig[i].labelColor ?? topZoneConfig[i].iconColor ?? iconColor"
           :transform="topZoneConfig[i].labelRotation
@@ -678,6 +679,7 @@ function computeLabelY(zone: Zone, cfg: ZoneConfig): number {
           :y="computeLabelY(zone, botZoneConfig[i])"
           text-anchor="middle"
           dominant-baseline="central"
+          font-family="'DejaVu Sans', sans-serif"
           :font-size="botZoneConfig[i].labelSize ?? 3"
           :fill="botZoneConfig[i].labelColor ?? botZoneConfig[i].iconColor ?? iconColor"
           :transform="botZoneConfig[i].labelRotation
