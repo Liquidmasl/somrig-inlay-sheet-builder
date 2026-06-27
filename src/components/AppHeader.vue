@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { mdiHeart, mdiWeatherNight, mdiWeatherSunny } from '@mdi/js'
 import { ref } from 'vue'
+import { useAnalytics } from '../composables/useAnalytics'
 import { useDarkMode } from '../composables/useDarkMode'
 import DonationModal from './DonationModal.vue'
 
 const { isDark, toggle } = useDarkMode()
+const { track } = useAnalytics()
 const showDonation = ref(false)
+
+function openDonationModal() {
+  track('donation-modal-open')
+  showDonation.value = true
+}
 </script>
 
 <template>
@@ -13,7 +20,7 @@ const showDonation = ref(false)
     <div class="flex items-center gap-2">
       <img src="/lambda_icon.png" alt="Logo" class="h-7 w-auto" />
       <h1 class="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
-        Somrig & Rodret Inlays
+        Tradvri Button Customizer
       </h1>
     </div>
     <div class="flex items-center gap-1 md:gap-2">
@@ -33,7 +40,7 @@ const showDonation = ref(false)
 
       <!-- Donation button -->
       <button
-        @click="showDonation = true"
+        @click="openDonationModal"
         class="flex items-center gap-1 px-2 py-1.5 md:px-3 md:py-2 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-xs md:text-sm font-medium"
         aria-label="Support this project"
         title="Support this project"
@@ -41,11 +48,14 @@ const showDonation = ref(false)
         <svg viewBox="0 0 24 24" class="w-4 h-4 md:w-5 md:h-5 fill-current">
           <path :d="mdiHeart" />
         </svg>
-        <div class="flex items-center flex-col">
-                            <span class="hidden sm:inline">No Ads, send me joy!</span>
+        <div class="flex items-center flex-col margin-x-5">
+                            <span class="hidden sm:inline">I dont show you ads, please pay me 🤓</span>
 
                   <span class="hidden sm:inline">€1 = Dev Dopamine ⚡</span>
           </div>
+          <svg viewBox="0 0 24 24" class="w-4 h-4 md:w-5 md:h-5 fill-current">
+          <path :d="mdiHeart" />
+        </svg>
       </button>
 
       <button
