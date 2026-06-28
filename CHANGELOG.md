@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.1] - 2026-06-28
+
+- Fixed 3D model (3MF) export producing overlapping geometry where separator lines cross, which could cause a print artifact/smudge at the intersections. Crossing separators now merge into a single clean solid.
+
+
 ## [2.0.0] - 2026-06-27
 
 
