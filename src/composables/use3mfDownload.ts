@@ -22,6 +22,7 @@
 import earcut from 'earcut'
 import * as fflate from 'fflate'
 import * as opentype from 'opentype.js'
+import * as polygonClipping from 'polygon-clipping'
 
 // Depth of the icon extrusion below the face surface (mm)
 const EXTRUDE_H = 0.4
@@ -473,16 +474,24 @@ function collectIconTris(svgEl: SVGSVGElement, font: opentype.Font): number[] {
   const Z0 = -EXTRUDE_H
   const Z1 = 0
 
-  const tris: number[] = []
+  // Accumulate every icon-layer outline (world space) as a polygon-clipping
+  // Polygon ([outer, ...holes]). The whole set is unioned before extruding so
+  // overlapping outlines — most importantly sub-dividers meeting the centre
+  // divider — dissolve into one manifold solid instead of self-intersecting
+  // prisms that print as a smudge at each crossing.
+  const polygons: polygonClipping.Polygon[] = []
 
-  /** Convert SVG-space rings to world space, group into outer+holes, extrude. */
+  /** Group world-space rings into outer+holes and queue them for the union. */
+  function addWorldRings(worldRings: [number, number][][]) {
+    for (const { outer, holes } of groupRingsIntoShapes(worldRings)) {
+      polygons.push([outer, ...holes])
+    }
+  }
+
+  /** Map SVG-space rings to world space, then queue for the union. */
   function processRings(svgRings: [number, number][][]) {
     if (svgRings.length === 0) return
-    const worldRings = svgRings.map((r) => svgRingToWorld(r, W, H))
-    const shapes = groupRingsIntoShapes(worldRings)
-    for (const { outer, holes } of shapes) {
-      tris.push(...extrudePolygon(outer, holes, Z0, Z1))
-    }
+    addWorldRings(svgRings.map((r) => svgRingToWorld(r, W, H)))
   }
 
   // ── MDI icon <path> elements (inside transformed <g>) ──────────────────────
@@ -577,12 +586,18 @@ function collectIconTris(svgEl: SVGSVGElement, font: opentype.Font): number[] {
       )
     }
 
-    const shapes = groupRingsIntoShapes(worldRings)
-    for (const { outer, holes } of shapes) {
-      tris.push(...extrudePolygon(outer, holes, Z0, Z1))
-    }
+    addWorldRings(worldRings)
   }
 
+  if (polygons.length === 0) return []
+
+  // Dissolve all overlaps into a manifold set of outlines, then extrude each.
+  const merged = polygonClipping.union(polygons[0], ...polygons.slice(1))
+
+  const tris: number[] = []
+  for (const [outer, ...holes] of merged) {
+    tris.push(...extrudePolygon(outer, holes, Z0, Z1))
+  }
   return tris
 }
 
