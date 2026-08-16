@@ -274,7 +274,7 @@ function downloadSvgForButton(buttonId: string) {
   const index =
     activeSheet.value?.buttons.findIndex((b) => b.id === buttonId) ?? 0
   track('svg-download')
-  recordDownload('svg')
+  recordDownload()
   downloadButtonSvg(svg, `button-inlay-${index + 1}.svg`)
 }
 
@@ -284,7 +284,7 @@ async function download3mfForButton(buttonId: string) {
   const index =
     activeSheet.value?.buttons.findIndex((b) => b.id === buttonId) ?? 0
   track('3mf-download')
-  recordDownload('3mf')
+  recordDownload()
   await download3mf(
     svg,
     activeButtonType.value,

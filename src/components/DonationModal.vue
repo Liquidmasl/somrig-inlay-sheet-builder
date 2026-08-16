@@ -2,7 +2,7 @@
 import { mdiClose, mdiHeart, mdiPrinter3d } from '@mdi/js'
 import { useAnalytics } from '../composables/useAnalytics'
 
-defineProps<{ open: boolean; show3dPrint?: boolean }>()
+defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: []; support: [] }>()
 
 const PAYPAL_DONATE_URL =
@@ -129,66 +129,65 @@ function onSupport(event = 'donation-click') {
             You'll be redirected to an external page. Every amount helps!
           </p>
 
-          <!-- 3D-print variant: extra context + free Makerworld boost, only shown
-               once the user has actually downloaded a 3mf -->
-          <template v-if="show3dPrint">
-            <div class="w-full border-t border-gray-200 dark:border-gray-800 pt-5 flex flex-col items-center gap-4">
-              <div class="flex items-center gap-2 text-gray-900 dark:text-white">
-                <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
-                  <path :d="mdiPrinter3d" />
-                </svg>
-                <h3 class="font-semibold text-base">Printing these yourself?</h3>
-              </div>
-
-              <!-- Free Makerworld boost — costs the user nothing. One card per
-                   model so the boost lands on the thing they actually printed.
-                   Sits directly under the heading so it lands above the fold;
-                   the reasoning below is for whoever wants it. -->
-              <div class="w-full grid grid-cols-2 gap-3">
-                <a
-                  v-for="model in MAKERWORLD_MODELS"
-                  :key="model.key"
-                  :href="model.url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="group flex flex-col rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow"
-                  @click="onSupport(`makerworld-boost-${model.key}-click`)"
-                >
-                  <img
-                    :src="model.photo"
-                    :alt="model.alt"
-                    width="480"
-                    height="640"
-                    class="w-full aspect-3/4 object-cover"
-                  />
-                  <span
-                    class="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-[#00AE42] group-hover:bg-[#009939] group-active:bg-[#00822F] text-white font-semibold text-sm transition-colors"
-                  >
-                    <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0 fill-current">
-                      <path :d="mdiPrinter3d" />
-                    </svg>
-                    Boost {{ model.name }}
-                  </span>
-                </a>
-              </div>
-
-              <p class="text-gray-600 dark:text-gray-400 text-center text-sm leading-relaxed">
-                Modelling, measuring and dialling these inlays in for a great fit and
-                feel without breakage took a stack of prototypes, a lot of failed prints
-                and a fair bit of filament to get right. If they save you that hassle,
-                a boost or a coffee means a lot.
-              </p>
-
-              <p class="text-gray-600 dark:text-gray-400 text-center text-sm leading-relaxed">
-                Heads up:
-                <strong class="font-semibold text-gray-800 dark:text-gray-200">models
-                you download here don't earn me any Makerworld points</strong> —
-                I didn't want to break your workflow just to chase them. So if you'd like
-                to support me for free, please boost any (or several!) of my models over
-                on Makerworld instead&nbsp;:)
-              </p>
+          <!-- Extra context + free Makerworld boost. Always shown: the heading
+               self-selects for people who print, and gating it on a prior 3mf
+               download meant the manual header button hid it entirely. -->
+          <div class="w-full border-t border-gray-200 dark:border-gray-800 pt-5 flex flex-col items-center gap-4">
+            <div class="flex items-center gap-2 text-gray-900 dark:text-white">
+              <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
+                <path :d="mdiPrinter3d" />
+              </svg>
+              <h3 class="font-semibold text-base">Printing these yourself?</h3>
             </div>
-          </template>
+
+            <!-- Free Makerworld boost — costs the user nothing. One card per
+                 model so the boost lands on the thing they actually printed.
+                 Sits directly under the heading so it lands above the fold;
+                 the reasoning below is for whoever wants it. -->
+            <div class="w-full grid grid-cols-2 gap-3">
+              <a
+                v-for="model in MAKERWORLD_MODELS"
+                :key="model.key"
+                :href="model.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="group flex flex-col rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow"
+                @click="onSupport(`makerworld-boost-${model.key}-click`)"
+              >
+                <img
+                  :src="model.photo"
+                  :alt="model.alt"
+                  width="480"
+                  height="640"
+                  class="w-full aspect-3/4 object-cover"
+                />
+                <span
+                  class="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-[#00AE42] group-hover:bg-[#009939] group-active:bg-[#00822F] text-white font-semibold text-sm transition-colors"
+                >
+                  <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0 fill-current">
+                    <path :d="mdiPrinter3d" />
+                  </svg>
+                  Boost {{ model.name }}
+                </span>
+              </a>
+            </div>
+
+            <p class="text-gray-600 dark:text-gray-400 text-center text-sm leading-relaxed">
+              Modelling, measuring and dialling these inlays in for a great fit and
+              feel without breakage took a stack of prototypes, a lot of failed prints
+              and a fair bit of filament to get right. If they save you that hassle,
+              a boost or a coffee means a lot.
+            </p>
+
+            <p class="text-gray-600 dark:text-gray-400 text-center text-sm leading-relaxed">
+              Heads up:
+              <strong class="font-semibold text-gray-800 dark:text-gray-200">models
+              you download here don't earn me any Makerworld points</strong> —
+              I didn't want to break your workflow just to chase them. So if you'd like
+              to support me for free, please boost any (or several!) of my models over
+              on Makerworld instead&nbsp;:)
+            </p>
+          </div>
         </div>
       </div>
     </Transition>
