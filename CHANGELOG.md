@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.1] - 2026-08-16
+
+
+- The support popup now always shows the 3D-printing section, so the MakerWorld boost links are reachable from the heart button in the header instead of only appearing after a 3MF download.
+
+
 ## [2.1.0] - 2026-08-16
 
 
