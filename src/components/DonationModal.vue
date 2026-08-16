@@ -140,22 +140,10 @@ function onSupport(event = 'donation-click') {
                 <h3 class="font-semibold text-base">Printing these yourself?</h3>
               </div>
 
-              <p class="text-gray-600 dark:text-gray-400 text-center text-sm leading-relaxed">
-                Modelling, measuring and dialling these inlays in for a great fit and
-                feel without breakage took a stack of prototypes, a lot of failed prints
-                and a fair bit of filament to get right. If they save you that hassle,
-                a boost or a coffee means a lot.
-              </p>
-
-              <p class="text-gray-600 dark:text-gray-400 text-center text-sm leading-relaxed">
-                Heads up: models you download here don't earn me any Makerworld points —
-                I didn't want to break your workflow just to chase them. So if you'd like
-                to support me for free, please boost any (or several!) of my models over
-                on Makerworld instead&nbsp;:)
-              </p>
-
               <!-- Free Makerworld boost — costs the user nothing. One card per
-                   model so the boost lands on the thing they actually printed. -->
+                   model so the boost lands on the thing they actually printed.
+                   Sits directly under the heading so it lands above the fold;
+                   the reasoning below is for whoever wants it. -->
               <div class="w-full grid grid-cols-2 gap-3">
                 <a
                   v-for="model in MAKERWORLD_MODELS"
@@ -183,6 +171,22 @@ function onSupport(event = 'donation-click') {
                   </span>
                 </a>
               </div>
+
+              <p class="text-gray-600 dark:text-gray-400 text-center text-sm leading-relaxed">
+                Modelling, measuring and dialling these inlays in for a great fit and
+                feel without breakage took a stack of prototypes, a lot of failed prints
+                and a fair bit of filament to get right. If they save you that hassle,
+                a boost or a coffee means a lot.
+              </p>
+
+              <p class="text-gray-600 dark:text-gray-400 text-center text-sm leading-relaxed">
+                Heads up:
+                <strong class="font-semibold text-gray-800 dark:text-gray-200">models
+                you download here don't earn me any Makerworld points</strong> —
+                I didn't want to break your workflow just to chase them. So if you'd like
+                to support me for free, please boost any (or several!) of my models over
+                on Makerworld instead&nbsp;:)
+              </p>
             </div>
           </template>
         </div>
