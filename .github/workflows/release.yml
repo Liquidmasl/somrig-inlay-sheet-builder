@@ -59,24 +59,32 @@ jobs:
               NOTES="${NOTES}${PR_NOTES}"$'\n'
             fi
           done
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          # Random delimiter: a fixed "EOF" lets a release note containing a
+          # lone EOF line terminate the block early and inject further outputs.
+          DELIM="notes-$(openssl rand -hex 16)"
+          echo "notes<<${DELIM}" >> $GITHUB_OUTPUT
           echo "$NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "${DELIM}" >> $GITHUB_OUTPUT
 
       - name: Update CHANGELOG.md
+        # NOTES comes in via env, never via ${{ }} interpolation. GitHub
+        # substitutes ${{ }} before bash parses the script, so PR-authored text
+        # spliced in that way is executed as script: a note containing a double
+        # quote breaks the release, and one containing $(...) runs on a runner
+        # holding contents:write and the prod Netlify token.
+        env:
+          NOTES: ${{ steps.notes.outputs.notes }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
           DATE=$(date +%Y-%m-%d)
-          NEW_SECTION="## [${VERSION}] - ${DATE}"$'\n\n'"${{ steps.notes.outputs.notes }}"
-          if [ -f CHANGELOG.md ]; then
-            TMP=$(mktemp)
-            head -1 CHANGELOG.md > "$TMP"
-            printf "\n%s\n" "$NEW_SECTION" >> "$TMP"
-            tail -n +2 CHANGELOG.md >> "$TMP"
-            mv "$TMP" CHANGELOG.md
-          else
-            printf "# Changelog\n\n%s\n" "$NEW_SECTION" > CHANGELOG.md
+          if [ ! -f CHANGELOG.md ]; then
+            printf '# Changelog\n' > CHANGELOG.md
           fi
+          TMP=$(mktemp)
+          head -1 CHANGELOG.md > "$TMP"
+          printf '\n## [%s] - %s\n\n%s\n' "$VERSION" "$DATE" "$NOTES" >> "$TMP"
+          tail -n +2 CHANGELOG.md >> "$TMP"
+          mv "$TMP" CHANGELOG.md
 
       - name: Build
         run: npm run build
