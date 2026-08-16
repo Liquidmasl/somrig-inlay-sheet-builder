@@ -10,14 +10,16 @@
  *   - shows at most once per 24h (`lastShownAt`),
  *   - any support-button click mutes the auto-popup for 7 days (`mutedUntil`).
  *
- * The 3D-print variant (`show3dPrint`) is enabled once any 3mf has been downloaded.
  * The manual header button (`openManually`) bypasses all gates.
+ *
+ * This composable decides only *when* the modal opens; the modal itself always
+ * shows the same content.
  *
  * State persists in localStorage. A module-level singleton so the header and App.vue
  * share one instance.
  */
 
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 
 const STORAGE_KEY = 'donation-prompt'
 
@@ -27,7 +29,6 @@ const MUTE_MS = 7 * DAY_MS
 
 interface PersistedState {
   downloadCount: number
-  has3mfDownloaded: boolean
   lastShownAt: number
   mutedUntil: number
 }
@@ -35,7 +36,6 @@ interface PersistedState {
 function load(): PersistedState {
   const fallback: PersistedState = {
     downloadCount: 0,
-    has3mfDownloaded: false,
     lastShownAt: 0,
     mutedUntil: 0,
   }
@@ -59,7 +59,6 @@ function save() {
 }
 
 const isOpen = ref(false)
-const show3dPrint = computed(() => state.value.has3mfDownloaded)
 
 function open() {
   isOpen.value = true
@@ -76,8 +75,7 @@ function maybeShow() {
 }
 
 export function useDonationPrompt() {
-  function recordDownload(kind: 'svg' | '3mf') {
-    if (kind === '3mf') state.value.has3mfDownloaded = true
+  function recordDownload() {
     state.value.downloadCount += 1
     save()
     if (state.value.downloadCount >= DOWNLOAD_THRESHOLD) maybeShow()
@@ -102,7 +100,6 @@ export function useDonationPrompt() {
 
   return {
     isOpen,
-    show3dPrint,
     recordDownload,
     recordSheetAction,
     openManually,
