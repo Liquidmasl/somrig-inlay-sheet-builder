@@ -9,7 +9,7 @@ import WhatsNewModal from './WhatsNewModal.vue'
 
 const { isDark, toggle } = useDarkMode()
 const { track } = useAnalytics()
-const { isOpen, show3dPrint, openManually, close, mute } = useDonationPrompt()
+const { isOpen, openManually, close, mute } = useDonationPrompt()
 const { isOpen: whatsNewOpen, dismiss: dismissWhatsNew } = useWhatsNew()
 
 function openDonationModal() {
@@ -75,7 +75,6 @@ function openDonationModal() {
 
   <DonationModal
     :open="isOpen"
-    :show3d-print="show3dPrint"
     @close="close"
     @support="mute"
   />
