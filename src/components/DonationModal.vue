@@ -8,12 +8,30 @@ const emit = defineEmits<{ close: []; support: [] }>()
 const PAYPAL_DONATE_URL =
   'https://www.paypal.com/donate/?hosted_button_id=PESLSWZB9S2UG'
 
-const MAKERWORLD_BOOST_URL = 'https://makerworld.com/en/@liquidmasl'
-
-// Served from public/ at runtime (bound, so the bundler doesn't try to resolve it).
-// TODO(marcel): drop the real prototype photo at public/prototype-prints.jpg, then
-// re-enable the <img> in the 3D-print section below.
-// const PROTOTYPE_IMAGE_URL = '/prototype-prints.jpg'
+// One boost target per model. Photos are served from public/photos at runtime,
+// so the bundler leaves them alone; both are 3:4 portrait.
+const MAKERWORLD_MODELS: {
+  key: string
+  name: string
+  url: string
+  photo: string
+  alt: string
+}[] = [
+  {
+    key: 'somrig',
+    name: 'Somrig',
+    url: 'https://makerworld.com/en/models/3179135-sorig-custom-faceplate-with-builder-and-blanks#profileId-3595428',
+    photo: '/photos/somrig-cat.webp',
+    alt: 'A cat lying next to a printed Somrig cover plate',
+  },
+  {
+    key: 'bilresa',
+    name: 'Bilresa',
+    url: 'https://makerworld.com/en/models/3177494-bilresa-custom-faceplate-with-builder-and-blanks#profileId-3593338',
+    photo: '/photos/bilresa-cat.webp',
+    alt: 'A cat pawing at a printed orange Bilresa cover plate',
+  },
+]
 
 const { track } = useAnalytics()
 
@@ -42,7 +60,9 @@ function onSupport(event = 'donation-click') {
         />
 
         <!-- Modal card -->
-        <div class="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-5">
+        <!-- [&>*]:shrink-0 — the card is a scrolling flex column, so without it
+             the flex algorithm squashes children to fit instead of scrolling. -->
+        <div class="relative w-full max-w-md max-h-[90vh] overflow-y-auto [&>*]:shrink-0 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-5">
           <!-- Close button -->
           <button
             class="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -134,27 +154,35 @@ function onSupport(event = 'donation-click') {
                 on Makerworld instead&nbsp;:)
               </p>
 
-              <!-- TODO(marcel): re-enable once public/prototype-prints.jpg exists
-              <img
-                :src="PROTOTYPE_IMAGE_URL"
-                alt="Prototype 3D prints"
-                class="w-full rounded-xl shadow-md object-cover"
-              />
-              -->
-
-              <!-- Free Makerworld boost — costs the user nothing -->
-              <a
-                :href="MAKERWORLD_BOOST_URL"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="flex items-center gap-2 rounded-xl px-5 py-3 bg-[#00AE42] hover:bg-[#009939] active:bg-[#00822F] text-white font-semibold text-sm transition-colors shadow-md hover:shadow-lg"
-                @click="onSupport('makerworld-boost-click')"
-              >
-                <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current">
-                  <path :d="mdiPrinter3d" />
-                </svg>
-                Boost me for free on Makerworld!
-              </a>
+              <!-- Free Makerworld boost — costs the user nothing. One card per
+                   model so the boost lands on the thing they actually printed. -->
+              <div class="w-full grid grid-cols-2 gap-3">
+                <a
+                  v-for="model in MAKERWORLD_MODELS"
+                  :key="model.key"
+                  :href="model.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="group flex flex-col rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow"
+                  @click="onSupport(`makerworld-boost-${model.key}-click`)"
+                >
+                  <img
+                    :src="model.photo"
+                    :alt="model.alt"
+                    width="480"
+                    height="640"
+                    class="w-full aspect-3/4 object-cover"
+                  />
+                  <span
+                    class="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-[#00AE42] group-hover:bg-[#009939] group-active:bg-[#00822F] text-white font-semibold text-sm transition-colors"
+                  >
+                    <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0 fill-current">
+                      <path :d="mdiPrinter3d" />
+                    </svg>
+                    Boost {{ model.name }}
+                  </span>
+                </a>
+              </div>
             </div>
           </template>
         </div>

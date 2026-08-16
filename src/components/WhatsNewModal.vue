@@ -16,6 +16,23 @@ const emit = defineEmits<{ close: [] }>()
 const GITHUB_ISSUES_URL =
   'https://github.com/Liquidmasl/somrig-inlay-sheet-builder/issues/new'
 
+// Served from public/photos at runtime, so the bundler leaves them alone.
+// All 3:4 portrait — the strip below assumes that aspect ratio.
+const photos: { src: string; alt: string }[] = [
+  {
+    src: '/photos/somrig-wall.webp',
+    alt: 'Printed black-and-orange Somrig cover plate mounted on a wall',
+  },
+  {
+    src: '/photos/bilresa-wall.webp',
+    alt: 'Printed orange Bilresa cover plate mounted on a wall',
+  },
+  {
+    src: '/photos/bilresa-bambu.webp',
+    alt: 'A Bilresa button with a freshly printed cover plate on a Bambu Lab printer',
+  },
+]
+
 const changes: { icon: string; text: string }[] = [
   {
     icon: mdiPaletteOutline,
@@ -59,7 +76,9 @@ const { track } = useAnalytics()
         />
 
         <!-- Modal card -->
-        <div class="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 flex flex-col gap-5">
+        <!-- [&>*]:shrink-0 — the card is a scrolling flex column, so without it
+             the flex algorithm squashes children to fit instead of scrolling. -->
+        <div class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto [&>*]:shrink-0 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 flex flex-col gap-5">
           <!-- Close button -->
           <button
             class="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -77,6 +96,19 @@ const { track } = useAnalytics()
             <h2 id="whats-new-title" class="text-xl font-bold text-gray-900 dark:text-white">
               Welcome back — here's what's new
             </h2>
+          </div>
+
+          <!-- Printed-in-the-wild photo strip -->
+          <div class="grid grid-cols-3 gap-2">
+            <img
+              v-for="photo in photos"
+              :key="photo.src"
+              :src="photo.src"
+              :alt="photo.alt"
+              width="480"
+              height="640"
+              class="w-full aspect-3/4 object-cover rounded-xl shadow-md"
+            />
           </div>
 
           <!-- Changes list -->
