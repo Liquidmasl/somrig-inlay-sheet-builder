@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.0] - 2026-08-16
+
+
+- The welcome popup now shows photos of real printed cover plates — Somrig and Bilresa mounted on a wall, and one fresh off the printer.
+- The support popup's 3D-printing section now links straight to the Somrig and Bilresa models on MakerWorld, so a free boost lands on the model you actually printed. Cats included.
+- Fixed: the "what's new" popup never re-appeared for anyone who had dismissed an older version, so the 2.0 release notes went unseen.
+
+
 ## [2.0.2] - 2026-06-28
 
 
