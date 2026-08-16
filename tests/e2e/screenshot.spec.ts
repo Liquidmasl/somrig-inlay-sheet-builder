@@ -9,7 +9,7 @@
  */
 
 import path from 'node:path'
-import { test } from '@playwright/test'
+import { test } from './fixtures'
 
 const SCREENSHOTS_DIR = path.resolve('tests/e2e/screenshots')
 

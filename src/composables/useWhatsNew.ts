@@ -13,7 +13,7 @@
 import { ref } from 'vue'
 
 // Bump (and refresh the copy in WhatsNewModal.vue) on each minor/major release.
-export const WHATS_NEW_VERSION = '1.5'
+export const WHATS_NEW_VERSION = '2.1'
 
 const STORAGE_KEY = 'whats-new-seen'
 
