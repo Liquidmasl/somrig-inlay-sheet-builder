@@ -1,7 +1,8 @@
 /**
  * use3mfDownload — generates a 3MF file containing:
- *   Object 1: physical button plate (parsed from a binary STL shipped in public/models/)
- *   Object 2: extruded icon / indicator / label layer embedded into the face at Z=0
+ *   Plate object: physical button plate (parsed from a binary STL shipped in public/models/)
+ *   One object per colour: extruded icon / indicator / label geometry embedded
+ *   into the face at Z=0, grouped by the fill/stroke colour used in the preview
  *
  * Coordinate conventions
  * ─────────────────────
@@ -12,11 +13,17 @@
  *            worldY = H/2 − svgY   (Y flip)
  *            worldZ = -EXTRUDE_H..0 (icon layer embedded into face, flush at Z=0)
  *
- * Multi-colour printing (Bambu Studio)
- * ─────────────────────────────────────
- *   Import the 3MF, assign a different filament to each object.
- *   Both meshes share the Z=−EXTRUDE_H..0 region; the slicer assigns colour
- *   per object so the face surface remains flat with two colours.
+ * Multi-colour printing (Bambu Studio / Orca / PrusaSlicer)
+ * ─────────────────────────────────────────────────────────
+ *   Colours are carried by the 3MF core spec `<basematerials>` resource: one
+ *   `<base displaycolor="#RRGGBB">` per distinct colour, referenced from each
+ *   object via pid/pindex. Bambu Studio matches displaycolor against the loaded
+ *   filaments by RGB distance; slicers that ignore materials still get one part
+ *   per colour, so a filament can be assigned by hand in two clicks.
+ *
+ *   Plate and icon objects share the Z=−EXTRUDE_H..0 region (the icons are
+ *   embedded into the face) so the printed surface stays flat. Icon colour
+ *   groups never overlap each other — see resolveColorGroups().
  */
 
 import earcut from 'earcut'
@@ -462,9 +469,78 @@ function parseRotateTransform(
   }
 }
 
+// ── Paint colour resolution ───────────────────────────────────────────────────
+
+/** Fallback when an element carries no resolvable paint (matches the SVG default). */
+const DEFAULT_PAINT = '#000000'
+
+/** Fallback plate colour when the outline path cannot be read. */
+const DEFAULT_PLATE_COLOR = '#FFFFFF'
+
+/** Normalise a CSS/SVG paint string to uppercase #RRGGBB, or null if not a colour. */
+function normaliseColor(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const v = raw.trim().toLowerCase()
+  if (!v || v === 'none' || v === 'transparent' || v.startsWith('url(')) {
+    return null
+  }
+
+  const rgb = v.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/)
+  if (rgb) {
+    const hex = rgb
+      .slice(1, 4)
+      .map((c) =>
+        Math.max(0, Math.min(255, Math.round(parseFloat(c))))
+          .toString(16)
+          .padStart(2, '0'),
+      )
+      .join('')
+    return `#${hex}`.toUpperCase()
+  }
+
+  const hex = v.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/)
+  if (hex) {
+    const h = hex[1]
+    const full =
+      h.length === 3
+        ? h
+            .split('')
+            .map((c) => c + c)
+            .join('')
+        : h
+    return `#${full}`.toUpperCase()
+  }
+
+  return null
+}
+
+/**
+ * Resolve the effective paint of an element.
+ *
+ * Presentation attributes are walked up the tree first — MDI icons put `fill`
+ * on the wrapping `<g>`, not on the `<path>` — then computed style as a
+ * fallback for anything styled via CSS.
+ */
+function paintOf(el: Element, prop: 'fill' | 'stroke'): string {
+  for (let cur: Element | null = el; cur; cur = cur.parentElement) {
+    const attr = normaliseColor(cur.getAttribute(prop))
+    if (attr) return attr
+  }
+  return normaliseColor(getComputedStyle(el)[prop]) ?? DEFAULT_PAINT
+}
+
 // ── Collect icon-layer geometry from the SVG DOM ──────────────────────────────
 
-function collectIconTris(svgEl: SVGSVGElement, font: opentype.Font): number[] {
+/** Extruded geometry for one colour of the icon layer. */
+export interface ColorGroup {
+  color: string // #RRGGBB
+  tris: number[] // flat xyz triples, 9 numbers per triangle
+}
+
+function collectIconGroups(
+  svgEl: SVGSVGElement,
+  font: opentype.Font,
+): ColorGroup[] {
   const vb = svgEl.viewBox.baseVal
   const W = vb.width
   const H = vb.height
@@ -475,137 +551,190 @@ function collectIconTris(svgEl: SVGSVGElement, font: opentype.Font): number[] {
   const Z1 = 0
 
   // Accumulate every icon-layer outline (world space) as a polygon-clipping
-  // Polygon ([outer, ...holes]). The whole set is unioned before extruding so
-  // overlapping outlines — most importantly sub-dividers meeting the centre
-  // divider — dissolve into one manifold solid instead of self-intersecting
-  // prisms that print as a smudge at each crossing.
-  const polygons: polygonClipping.Polygon[] = []
+  // Polygon ([outer, ...holes]), bucketed by paint colour. Each bucket is
+  // unioned before extruding so overlapping outlines — most importantly
+  // sub-dividers meeting the centre divider — dissolve into one manifold solid
+  // instead of self-intersecting prisms that print as a smudge at each crossing.
+  // Map insertion order = SVG document order, which resolveColorGroups() relies
+  // on to settle overlaps between colours.
+  const buckets = new Map<string, polygonClipping.Polygon[]>()
 
-  /** Group world-space rings into outer+holes and queue them for the union. */
-  function addWorldRings(worldRings: [number, number][][]) {
+  /** Group world-space rings into outer+holes and queue them under `color`. */
+  function addWorldRings(worldRings: [number, number][][], color: string) {
+    const bucket = buckets.get(color) ?? []
     for (const { outer, holes } of groupRingsIntoShapes(worldRings)) {
-      polygons.push([outer, ...holes])
+      bucket.push([outer, ...holes])
     }
+    buckets.set(color, bucket)
   }
 
-  /** Map SVG-space rings to world space, then queue for the union. */
-  function processRings(svgRings: [number, number][][]) {
+  /** Map SVG-space rings to world space, then queue them under `color`. */
+  function processRings(svgRings: [number, number][][], color: string) {
     if (svgRings.length === 0) return
-    addWorldRings(svgRings.map((r) => svgRingToWorld(r, W, H)))
-  }
-
-  // ── MDI icon <path> elements (inside transformed <g>) ──────────────────────
-  const iconPaths = svgEl.querySelectorAll<SVGPathElement>(
-    'g[clip-path] g[transform] > path',
-  )
-  for (const pathEl of iconPaths) {
-    processRings(samplePathRings(pathEl, svgEl))
-  }
-
-  // ── Dot / double-dot indicators (<circle>) ──────────────────────────────────
-  const circles = svgEl.querySelectorAll<SVGCircleElement>(
-    'g[clip-path] circle',
-  )
-  for (const circ of circles) {
-    const cx = parseFloat(circ.getAttribute('cx') ?? '0')
-    const cy = parseFloat(circ.getAttribute('cy') ?? '0')
-    const r = parseFloat(circ.getAttribute('r') ?? '0')
-    processRings([circlePolygon(cx, cy, r, 20)])
-  }
-
-  // ── Dash indicators (<rect>) ────────────────────────────────────────────────
-  const rects = svgEl.querySelectorAll<SVGRectElement>('g[clip-path] rect')
-  for (const rect of rects) {
-    const x = parseFloat(rect.getAttribute('x') ?? '0')
-    const y = parseFloat(rect.getAttribute('y') ?? '0')
-    const w = parseFloat(rect.getAttribute('width') ?? '0')
-    const h = parseFloat(rect.getAttribute('height') ?? '0')
-    processRings([rectPolygon(x, y, w, h)])
-  }
-
-  // ── Separator lines (<line>) ─────────────────────────────────────────────────
-  const lines = svgEl.querySelectorAll<SVGLineElement>('g[clip-path] line')
-  for (const lineEl of lines) {
-    const x1 = parseFloat(lineEl.getAttribute('x1') ?? '0')
-    const y1 = parseFloat(lineEl.getAttribute('y1') ?? '0')
-    const x2 = parseFloat(lineEl.getAttribute('x2') ?? '0')
-    const y2 = parseFloat(lineEl.getAttribute('y2') ?? '0')
-    const thickness = parseFloat(lineEl.getAttribute('stroke-width') ?? '0.3')
-    const dx = x2 - x1
-    const dy = y2 - y1
-    const len = Math.sqrt(dx * dx + dy * dy)
-    if (len < 0.01) continue
-    // Perpendicular half-offset to turn the line into a rectangle
-    const nx = (-dy / len) * (thickness / 2)
-    const ny = (dx / len) * (thickness / 2)
-    const corners: [number, number][] = [
-      [x1 + nx, y1 + ny],
-      [x2 + nx, y2 + ny],
-      [x2 - nx, y2 - ny],
-      [x1 - nx, y1 - ny],
-    ]
-    processRings([corners])
-  }
-
-  // ── Text labels (<text>) ────────────────────────────────────────────────────
-  const texts = svgEl.querySelectorAll<SVGTextElement>('g[clip-path] text')
-  for (const textEl of texts) {
-    const content = (textEl.textContent ?? '').trim()
-    if (!content) continue
-
-    const cx = parseFloat(textEl.getAttribute('x') ?? '0')
-    const cy = parseFloat(textEl.getAttribute('y') ?? '0')
-    const fontSize = parseFloat(textEl.getAttribute('font-size') ?? '3')
-    const rot = parseRotateTransform(textEl.getAttribute('transform'))
-
-    // Measure bbox at origin to get centering offsets
-    const tmpPath = font.getPath(content, 0, 0, fontSize)
-    const bb = tmpPath.getBoundingBox()
-    if (bb.x2 <= bb.x1 || bb.y2 <= bb.y1) continue
-
-    // Render centered at (cx, cy) — matching SVG text-anchor:middle + dominant-baseline:central
-    const glyphPath = font.getPath(
-      content,
-      cx - (bb.x1 + bb.x2) / 2,
-      cy - (bb.y1 + bb.y2) / 2,
-      fontSize,
+    addWorldRings(
+      svgRings.map((r) => svgRingToWorld(r, W, H)),
+      color,
     )
-    const svgRings = opentypePathToRings(glyphPath)
-    if (svgRings.length === 0) continue
+  }
 
-    // Convert to world space
-    let worldRings = svgRings.map((r) => svgRingToWorld(r, W, H))
+  // Every icon-layer element, in document order — paint order matters once the
+  // outlines are split per colour (see resolveColorGroups).
+  const elements = svgEl.querySelectorAll<SVGElement>(
+    'g[clip-path] g[transform] > path, g[clip-path] circle, g[clip-path] rect, g[clip-path] line, g[clip-path] text',
+  )
 
-    // Apply text rotation in world space.
-    // SVG rotate is CW in Y-down; after Y-flip, same angle becomes CCW (Y-up).
-    // Negate so the printed result matches the SVG preview.
-    if (rot) {
-      const [pivotX, pivotY] = svgRingToWorld([[rot.cx, rot.cy]], W, H)[0]
-      worldRings = worldRings.map((ring) =>
-        rotateRing(ring, -rot.deg, pivotX, pivotY),
-      )
+  for (const el of elements) {
+    switch (el.tagName) {
+      // ── MDI icon <path> (inside transformed <g>) ───────────────────────────
+      case 'path':
+        processRings(
+          samplePathRings(el as SVGPathElement, svgEl),
+          paintOf(el, 'fill'),
+        )
+        break
+
+      // ── Dot / double-dot indicators ────────────────────────────────────────
+      case 'circle': {
+        const cx = parseFloat(el.getAttribute('cx') ?? '0')
+        const cy = parseFloat(el.getAttribute('cy') ?? '0')
+        const r = parseFloat(el.getAttribute('r') ?? '0')
+        processRings([circlePolygon(cx, cy, r, 20)], paintOf(el, 'fill'))
+        break
+      }
+
+      // ── Dash indicators ────────────────────────────────────────────────────
+      case 'rect': {
+        const x = parseFloat(el.getAttribute('x') ?? '0')
+        const y = parseFloat(el.getAttribute('y') ?? '0')
+        const w = parseFloat(el.getAttribute('width') ?? '0')
+        const h = parseFloat(el.getAttribute('height') ?? '0')
+        processRings([rectPolygon(x, y, w, h)], paintOf(el, 'fill'))
+        break
+      }
+
+      // ── Separator lines ────────────────────────────────────────────────────
+      case 'line': {
+        const x1 = parseFloat(el.getAttribute('x1') ?? '0')
+        const y1 = parseFloat(el.getAttribute('y1') ?? '0')
+        const x2 = parseFloat(el.getAttribute('x2') ?? '0')
+        const y2 = parseFloat(el.getAttribute('y2') ?? '0')
+        const thickness = parseFloat(el.getAttribute('stroke-width') ?? '0.3')
+        const dx = x2 - x1
+        const dy = y2 - y1
+        const len = Math.sqrt(dx * dx + dy * dy)
+        if (len < 0.01) break
+        // Perpendicular half-offset to turn the line into a rectangle
+        const nx = (-dy / len) * (thickness / 2)
+        const ny = (dx / len) * (thickness / 2)
+        const corners: [number, number][] = [
+          [x1 + nx, y1 + ny],
+          [x2 + nx, y2 + ny],
+          [x2 - nx, y2 - ny],
+          [x1 - nx, y1 - ny],
+        ]
+        processRings([corners], paintOf(el, 'stroke'))
+        break
+      }
+
+      // ── Text labels ────────────────────────────────────────────────────────
+      case 'text': {
+        const content = (el.textContent ?? '').trim()
+        if (!content) break
+
+        const cx = parseFloat(el.getAttribute('x') ?? '0')
+        const cy = parseFloat(el.getAttribute('y') ?? '0')
+        const fontSize = parseFloat(el.getAttribute('font-size') ?? '3')
+        const rot = parseRotateTransform(el.getAttribute('transform'))
+
+        // Measure bbox at origin to get centering offsets
+        const tmpPath = font.getPath(content, 0, 0, fontSize)
+        const bb = tmpPath.getBoundingBox()
+        if (bb.x2 <= bb.x1 || bb.y2 <= bb.y1) break
+
+        // Render centered at (cx, cy) — matching SVG text-anchor:middle + dominant-baseline:central
+        const glyphPath = font.getPath(
+          content,
+          cx - (bb.x1 + bb.x2) / 2,
+          cy - (bb.y1 + bb.y2) / 2,
+          fontSize,
+        )
+        const svgRings = opentypePathToRings(glyphPath)
+        if (svgRings.length === 0) break
+
+        // Convert to world space
+        let worldRings = svgRings.map((r) => svgRingToWorld(r, W, H))
+
+        // Apply text rotation in world space.
+        // SVG rotate is CW in Y-down; after Y-flip, same angle becomes CCW (Y-up).
+        // Negate so the printed result matches the SVG preview.
+        if (rot) {
+          const [pivotX, pivotY] = svgRingToWorld([[rot.cx, rot.cy]], W, H)[0]
+          worldRings = worldRings.map((ring) =>
+            rotateRing(ring, -rot.deg, pivotX, pivotY),
+          )
+        }
+
+        addWorldRings(worldRings, paintOf(el, 'fill'))
+        break
+      }
     }
-
-    addWorldRings(worldRings)
   }
 
-  if (polygons.length === 0) return []
+  return resolveColorGroups(buckets, Z0, Z1)
+}
 
-  // Dissolve all overlaps into a manifold set of outlines, then extrude each.
-  const merged = polygonClipping.union(polygons[0], ...polygons.slice(1))
+/**
+ * Turn per-colour outline buckets into non-overlapping extruded solids.
+ *
+ * Within a colour everything is unioned (manifold, no self-intersections).
+ * Across colours the SVG paint rule applies: a later element covers an earlier
+ * one, so every group is cut by the union of all groups that follow it. Two
+ * colours claiming the same volume is exactly what makes a slicer render a
+ * smudge at the crossing, so the geometry — not the slicer — resolves it.
+ */
+function resolveColorGroups(
+  buckets: Map<string, polygonClipping.Polygon[]>,
+  z0: number,
+  z1: number,
+): ColorGroup[] {
+  const areas = [...buckets.entries()]
+    .map(([color, polys]) => ({
+      color,
+      area: polygonClipping.union(polys[0], ...polys.slice(1)),
+    }))
+    .filter(({ area }) => area.length > 0)
 
-  const tris: number[] = []
-  for (const [outer, ...holes] of merged) {
-    tris.push(...extrudePolygon(outer, holes, Z0, Z1))
+  const groups: ColorGroup[] = []
+  for (let i = 0; i < areas.length; i++) {
+    const covering = areas.slice(i + 1).map(({ area }) => area)
+    const area = covering.length
+      ? polygonClipping.difference(areas[i].area, ...covering)
+      : areas[i].area
+
+    const tris: number[] = []
+    for (const [outer, ...holes] of area) {
+      tris.push(...extrudePolygon(outer, holes, z0, z1))
+    }
+    if (tris.length > 0) groups.push({ color: areas[i].color, tris })
   }
-  return tris
+  return groups
 }
 
 // ── 3MF XML builder ───────────────────────────────────────────────────────────
 
 const fmt = (n: number) => n.toFixed(4)
 
-function buildObjectXml(id: number, tris: number[]): string {
+/** Escape a string for use inside an XML attribute value. */
+function xmlAttr(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function buildObjectXml(part: Part, materialIndex: number): string {
+  const { id, name, tris } = part
   const triCount = tris.length / 9
   const vertMap = new Map<string, number>()
   const uniqueVerts: number[] = []
@@ -637,7 +766,7 @@ function buildObjectXml(id: number, tris: number[]): string {
     trisXml += `        <triangle v1="${v1}" v2="${v2}" v3="${v3}" />\n`
   }
 
-  return `    <object id="${id}" type="model">
+  return `    <object id="${id}" name="${xmlAttr(name)}" type="model" pid="${MATERIALS_ID}" pindex="${materialIndex}">
       <mesh>
         <vertices>
 ${vertsXml}        </vertices>
@@ -651,28 +780,70 @@ ${trisXml}        </triangles>
 // Puts the face (z=0, currently the top) at z=0 minimum so the slicer places it on the build plate.
 const FACE_DOWN_TRANSFORM = '1 0 0 0 -1 0 0 0 -1 0 0 0'
 
-function build3mfModel(plateTris: number[], iconTris: number[]): string {
-  const objects = [buildObjectXml(1, plateTris)]
-  let buildItem: string
+// Resource ids share one namespace with objects — the material group takes the first.
+const MATERIALS_ID = 1
 
-  if (iconTris.length > 0) {
-    objects.push(buildObjectXml(2, iconTris))
-    // Wrap both meshes in a component object so the slicer keeps them grouped.
-    // Each component retains its own filament assignment in Bambu Studio.
-    objects.push(`    <object id="3" type="model">
+/** One mesh in the exported model, carrying the colour it should print in. */
+interface Part {
+  id: number
+  name: string
+  color: string // #RRGGBB
+  tris: number[]
+}
+
+function build3mfModel(
+  plateTris: number[],
+  plateColor: string,
+  iconGroups: ColorGroup[],
+): string {
+  let nextId = MATERIALS_ID + 1
+  const parts: Part[] = [
+    { id: nextId++, name: 'Plate', color: plateColor, tris: plateTris },
+    ...iconGroups.map((group) => ({
+      id: nextId++,
+      name: `Inlay ${group.color}`,
+      color: group.color,
+      tris: group.tris,
+    })),
+  ]
+
+  // One <base> per distinct colour; parts sharing a colour share a material,
+  // so a slicer that maps materials → filaments needs one assignment per colour.
+  const materials = [...new Set(parts.map((p) => p.color))]
+  const materialIndex = new Map(materials.map((color, i) => [color, i]))
+
+  const basematerials = `    <basematerials id="${MATERIALS_ID}">
+${materials
+  .map(
+    (color) =>
+      `      <base name="${xmlAttr(color)}" displaycolor="${color}" />`,
+  )
+  .join('\n')}
+    </basematerials>`
+
+  const objects = parts.map((part) =>
+    buildObjectXml(part, materialIndex.get(part.color) ?? 0),
+  )
+
+  let buildItem: string
+  if (parts.length > 1) {
+    // Wrap the meshes in a component object so the slicer keeps them grouped as
+    // parts of one printable object, each with its own filament assignment.
+    const assemblyId = nextId++
+    objects.push(`    <object id="${assemblyId}" type="model">
       <components>
-        <component objectid="1" />
-        <component objectid="2" />
+${parts.map((p) => `        <component objectid="${p.id}" />`).join('\n')}
       </components>
     </object>`)
-    buildItem = `    <item objectid="3" transform="${FACE_DOWN_TRANSFORM}" />`
+    buildItem = `    <item objectid="${assemblyId}" transform="${FACE_DOWN_TRANSFORM}" />`
   } else {
-    buildItem = `    <item objectid="1" transform="${FACE_DOWN_TRANSFORM}" />`
+    buildItem = `    <item objectid="${parts[0].id}" transform="${FACE_DOWN_TRANSFORM}" />`
   }
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
   <resources>
+${basematerials}
 ${objects.join('\n')}
   </resources>
   <build>
@@ -697,7 +868,11 @@ export function use3mfDownload() {
     ])
 
     const plateTris = parseStl(stlBuf)
-    const iconTris = collectIconTris(svgEl, font)
+    const iconGroups = collectIconGroups(svgEl, font)
+    // The button outline is the SVG's only direct <path> child; its fill is the
+    // plate colour shown in the preview.
+    const outline = svgEl.querySelector(':scope > path')
+    const plateColor = outline ? paintOf(outline, 'fill') : DEFAULT_PLATE_COLOR
 
     const enc = new TextEncoder()
     const contentTypes = `<?xml version="1.0" encoding="UTF-8"?>
@@ -713,7 +888,9 @@ export function use3mfDownload() {
     const zipped = fflate.zipSync({
       '[Content_Types].xml': enc.encode(contentTypes),
       '_rels/.rels': enc.encode(rels),
-      '3D/3dmodel.model': enc.encode(build3mfModel(plateTris, iconTris)),
+      '3D/3dmodel.model': enc.encode(
+        build3mfModel(plateTris, plateColor, iconGroups),
+      ),
     })
 
     const blob = new Blob([zipped.buffer as ArrayBuffer], { type: 'model/3mf' })

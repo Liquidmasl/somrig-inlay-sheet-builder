@@ -429,7 +429,7 @@ async function downloadSheetPdfAction() {
                   <button
                     @click="download3mfForButton(btn.id)"
                     class="flex items-center gap-0.5 px-1.5 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    title="Download 3MF (plate + icon layer, ready for Bambu Studio multi-colour)"
+                    title="Download 3MF (plate + one part per colour, ready for Bambu Studio multi-colour)"
                     aria-label="Download 3MF"
                   >
                     <svg viewBox="0 0 24 24" class="w-3 h-3 fill-current"><path :d="mdiPrinter3d" /></svg>
@@ -559,7 +559,7 @@ async function downloadSheetPdfAction() {
               <button
                 @click="download3mfForButton(btn.id)"
                 class="flex items-center gap-0.5 px-1.5 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                title="Download 3MF (plate + icon layer, ready for Bambu Studio multi-colour)"
+                title="Download 3MF (plate + one part per colour, ready for Bambu Studio multi-colour)"
                 aria-label="Download 3MF"
               >
                 <svg viewBox="0 0 24 24" class="w-3 h-3 fill-current"><path :d="mdiPrinter3d" /></svg>
