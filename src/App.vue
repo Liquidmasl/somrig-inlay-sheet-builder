@@ -429,7 +429,7 @@ async function downloadSheetPdfAction() {
                   <button
                     @click="download3mfForButton(btn.id)"
                     class="flex items-center gap-0.5 px-1.5 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    title="Download 3MF (plate + icon layer, ready for Bambu Studio multi-colour)"
+                    title="Download 3MF (plate + one part per colour, ready for Bambu Studio multi-colour)"
                     aria-label="Download 3MF"
                   >
                     <svg viewBox="0 0 24 24" class="w-3 h-3 fill-current"><path :d="mdiPrinter3d" /></svg>
@@ -559,7 +559,7 @@ async function downloadSheetPdfAction() {
               <button
                 @click="download3mfForButton(btn.id)"
                 class="flex items-center gap-0.5 px-1.5 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 shadow text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                title="Download 3MF (plate + icon layer, ready for Bambu Studio multi-colour)"
+                title="Download 3MF (plate + one part per colour, ready for Bambu Studio multi-colour)"
                 aria-label="Download 3MF"
               >
                 <svg viewBox="0 0 24 24" class="w-3 h-3 fill-current"><path :d="mdiPrinter3d" /></svg>
@@ -602,7 +602,9 @@ async function downloadSheetPdfAction() {
     </main>
 
     <!-- Floating editor panel - vertical on mobile, horizontal on desktop -->
-    <div class="no-print fixed bottom-0 left-0 right-0 flex justify-center p-2 md:p-4 pointer-events-none">
+    <!-- z-20 keeps it above the z-10 per-card action buttons (download/duplicate/
+         delete) it would otherwise scroll underneath, and below the z-50 modals. -->
+    <div class="no-print fixed bottom-0 left-0 right-0 z-20 flex justify-center p-2 md:p-4 pointer-events-none">
       <aside
         ref="editorPanelRef"
         class="pointer-events-auto w-full max-w-4xl bg-white/80 dark:bg-gray-900/80 rounded-t-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden max-h-[50vh] md:max-h-none overflow-y-auto"
