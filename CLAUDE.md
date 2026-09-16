@@ -89,6 +89,7 @@ Playwright is used for e2e tests. Config: `playwright.config.ts`. Tests live in 
 | `tests/e2e/app.spec.ts` | App load, header visibility, dark mode toggle |
 | `tests/e2e/button-inlay-svg.spec.ts` | SVG rendering, zone variants, indicator labels |
 | `tests/e2e/3mf-export.spec.ts` | 3MF package structure, per-colour objects, watertight meshes |
+| `tests/e2e/editor-panel-layering.spec.ts` | Floating editor panel stacks above card action buttons |
 | `tests/e2e/screenshot.spec.ts` | Screenshot capture for PR documentation |
 
 **Screenshots** are written to `tests/e2e/screenshots/` (gitignored by default).

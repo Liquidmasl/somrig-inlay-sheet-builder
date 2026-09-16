@@ -602,7 +602,9 @@ async function downloadSheetPdfAction() {
     </main>
 
     <!-- Floating editor panel - vertical on mobile, horizontal on desktop -->
-    <div class="no-print fixed bottom-0 left-0 right-0 flex justify-center p-2 md:p-4 pointer-events-none">
+    <!-- z-20 keeps it above the z-10 per-card action buttons (download/duplicate/
+         delete) it would otherwise scroll underneath, and below the z-50 modals. -->
+    <div class="no-print fixed bottom-0 left-0 right-0 z-20 flex justify-center p-2 md:p-4 pointer-events-none">
       <aside
         ref="editorPanelRef"
         class="pointer-events-auto w-full max-w-4xl bg-white/80 dark:bg-gray-900/80 rounded-t-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden max-h-[50vh] md:max-h-none overflow-y-auto"
