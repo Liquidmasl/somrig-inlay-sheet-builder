@@ -5,6 +5,7 @@ import {
   mdiContentSaveOutline,
   mdiHeart,
   mdiPaletteOutline,
+  mdiPrinter3d,
   mdiShape,
   mdiVectorSquare,
 } from '@mdi/js'
@@ -49,7 +50,11 @@ const photos: CarouselPhoto[] = [
 const changes: { icon: string; text: string }[] = [
   {
     icon: mdiPaletteOutline,
-    text: 'Multicolour 3MF download — 3D-printable Somrig & Bilresa buttons, ready for multi-filament printing.',
+    text: 'Colours now survive the 3MF export — icons, labels and separators are grouped into one part per colour, so Bambu Studio can put each on its own filament.',
+  },
+  {
+    icon: mdiPrinter3d,
+    text: '3MF download for 3D-printable Somrig & Bilresa buttons, ready for multi-filament printing.',
   },
   {
     icon: mdiShape,
