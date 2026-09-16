@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.0] - 2026-09-16
+
+
+- 3MF exports now keep icon colours: geometry is grouped into one part per colour and the colours are written into the file, so Bambu Studio can map them to filaments instead of importing everything white.
+- Fixed the floating editor panel being covered by a card's SVG / 3MF / duplicate / delete buttons while scrolling the sheet.
+
+- The What's New popup can be reopened any time from the megaphone button in the header, instead of only appearing once per release.
+- The popup now shows a photo carousel including prints sent in by other users, credited to them.
+
+
 ## [2.1.1] - 2026-08-16
 
 
