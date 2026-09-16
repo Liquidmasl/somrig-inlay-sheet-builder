@@ -6,6 +6,9 @@
  * "what's new" content; the popup then re-appears once for every visitor. Patch
  * releases intentionally do NOT re-trigger it.
  *
+ * The header button (`openManually`) bypasses the gate so the popup stays
+ * reachable after it has been dismissed.
+ *
  * Last-seen version persists in localStorage. Module-level singleton, mirroring
  * useDonationPrompt.
  */
@@ -13,7 +16,7 @@
 import { ref } from 'vue'
 
 // Bump (and refresh the copy in WhatsNewModal.vue) on each minor/major release.
-export const WHATS_NEW_VERSION = '2.1'
+export const WHATS_NEW_VERSION = '2.2'
 
 const STORAGE_KEY = 'whats-new-seen'
 
@@ -29,6 +32,11 @@ function seenCurrent(): boolean {
 const isOpen = ref(!seenCurrent())
 
 export function useWhatsNew() {
+  /** Reopen from the header, regardless of whether this version was seen. */
+  function openManually() {
+    isOpen.value = true
+  }
+
   function dismiss() {
     isOpen.value = false
     try {
@@ -38,5 +46,5 @@ export function useWhatsNew() {
     }
   }
 
-  return { isOpen, dismiss }
+  return { isOpen, openManually, dismiss }
 }

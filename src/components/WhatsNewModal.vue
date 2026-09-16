@@ -5,10 +5,12 @@ import {
   mdiContentSaveOutline,
   mdiHeart,
   mdiPaletteOutline,
+  mdiPrinter3d,
   mdiShape,
   mdiVectorSquare,
 } from '@mdi/js'
 import { useAnalytics } from '../composables/useAnalytics'
+import PhotoCarousel, { type CarouselPhoto } from './PhotoCarousel.vue'
 
 defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
@@ -17,12 +19,10 @@ const GITHUB_ISSUES_URL =
   'https://github.com/Liquidmasl/somrig-inlay-sheet-builder/issues/new'
 
 // Served from public/photos at runtime, so the bundler leaves them alone.
-// All 3:4 portrait — the strip below assumes that aspect ratio.
-const photos: { src: string; alt: string }[] = [
-  {
-    src: '/photos/somrig-wall.webp',
-    alt: 'Printed black-and-orange Somrig cover plate mounted on a wall',
-  },
+// Portrait and landscape both work — the carousel sizes itself to each photo.
+// `credit` marks a photo sent in by someone else; add new ones at the end.
+const photos: CarouselPhoto[] = [
+  // Bilresa leads — it is what people are actually building now.
   {
     src: '/photos/bilresa-wall.webp',
     alt: 'Printed orange Bilresa cover plate mounted on a wall',
@@ -31,12 +31,30 @@ const photos: { src: string; alt: string }[] = [
     src: '/photos/bilresa-bambu.webp',
     alt: 'A Bilresa button with a freshly printed cover plate on a Bambu Lab printer',
   },
+  {
+    src: '/photos/somrig-wall.webp',
+    alt: 'Printed black-and-orange Somrig cover plate mounted on a wall',
+  },
+  {
+    src: '/photos/ghreak_shared.webp',
+    alt: 'A printed button cover shared by ghreak',
+    credit: '— ghreak, via MakerWorld',
+  },
+  {
+    src: '/photos/OutName_shared.webp',
+    alt: 'A printed button cover shared by OutName',
+    credit: '— OutName, via MakerWorld',
+  },
 ]
 
 const changes: { icon: string; text: string }[] = [
   {
     icon: mdiPaletteOutline,
-    text: 'Multicolour 3MF download — 3D-printable Somrig & Bilresa buttons, ready for multi-filament printing.',
+    text: 'Colours now survive the 3MF export — icons, labels and separators are grouped into one part per colour, so Bambu Studio can put each on its own filament.',
+  },
+  {
+    icon: mdiPrinter3d,
+    text: '3MF download for 3D-printable Somrig & Bilresa buttons, ready for multi-filament printing.',
   },
   {
     icon: mdiShape,
@@ -98,18 +116,8 @@ const { track } = useAnalytics()
             </h2>
           </div>
 
-          <!-- Printed-in-the-wild photo strip -->
-          <div class="grid grid-cols-3 gap-2">
-            <img
-              v-for="photo in photos"
-              :key="photo.src"
-              :src="photo.src"
-              :alt="photo.alt"
-              width="480"
-              height="640"
-              class="w-full aspect-3/4 object-cover rounded-xl shadow-md"
-            />
-          </div>
+          <!-- Printed in the wild — yours and photos people have sent in -->
+          <PhotoCarousel :photos="photos" />
 
           <!-- Changes list -->
           <ul class="flex flex-col gap-3">

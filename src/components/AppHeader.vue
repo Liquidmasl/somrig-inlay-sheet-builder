@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { mdiHeart, mdiWeatherNight, mdiWeatherSunny } from '@mdi/js'
+import {
+  mdiBullhornOutline,
+  mdiHeart,
+  mdiWeatherNight,
+  mdiWeatherSunny,
+} from '@mdi/js'
 import { useAnalytics } from '../composables/useAnalytics'
 import { useDarkMode } from '../composables/useDarkMode'
 import { useDonationPrompt } from '../composables/useDonationPrompt'
@@ -10,11 +15,20 @@ import WhatsNewModal from './WhatsNewModal.vue'
 const { isDark, toggle } = useDarkMode()
 const { track } = useAnalytics()
 const { isOpen, openManually, close, mute } = useDonationPrompt()
-const { isOpen: whatsNewOpen, dismiss: dismissWhatsNew } = useWhatsNew()
+const {
+  isOpen: whatsNewOpen,
+  openManually: openWhatsNew,
+  dismiss: dismissWhatsNew,
+} = useWhatsNew()
 
 function openDonationModal() {
   track('donation-modal-open')
   openManually()
+}
+
+function openWhatsNewModal() {
+  track('whats-new-manual-open')
+  openWhatsNew()
 }
 </script>
 
@@ -27,6 +41,18 @@ function openDonationModal() {
       </h1>
     </div>
     <div class="flex items-center gap-1 md:gap-2">
+      <!-- What's new — the popup only auto-opens once per release, this reopens it -->
+      <button
+        @click="openWhatsNewModal"
+        class="p-1.5 md:p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        aria-label="What's new"
+        title="What's new"
+      >
+        <svg viewBox="0 0 24 24" class="w-4 h-4 md:w-5 md:h-5 fill-current">
+          <path :d="mdiBullhornOutline" />
+        </svg>
+      </button>
+
       <!-- GitHub link -->
       <a
         href="https://github.com/Liquidmasl/somrig-inlay-sheet-builder"
