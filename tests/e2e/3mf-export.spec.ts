@@ -1,6 +1,7 @@
 /**
  * 3MF export — verifies the exported package carries one object per colour and
- * a matching <basematerials> resource, so slicers can map colours to filaments.
+ * a matching <m:colorgroup> resource, the only colour mechanism Bambu Studio
+ * parses out of a third-party 3MF.
  *
  * The export only runs in a real browser (it samples the live SVG DOM via
  * getScreenCTM / getPointAtLength), so it is covered here rather than in a unit test.
@@ -138,10 +139,18 @@ test.describe('3MF export', () => {
 
     const xml = await downloadModelXml(page)
 
-    // One <base> per distinct colour: plate white, black separators, red + blue icons.
-    const displayColors = [...xml.matchAll(/displaycolor="([^"]+)"/g)].map(
-      (m) => m[1],
+    // Colours must live in the materials-extension colour group, declared on <model>.
+    expect(xml).toContain(
+      'xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02"',
     )
+    expect(xml).not.toContain('basematerials')
+
+    // One <m:color> per distinct colour: plate white, black separators, red + blue icons.
+    const displayColors = [
+      ...xml.matchAll(/<m:color color="([^"]+)" \/>/g),
+    ].map((m) => m[1])
+    // 6-digit hex only — Slic3r-derived parsers fall back to white on 8 digits.
+    for (const color of displayColors) expect(color).toMatch(/^#[0-9A-F]{6}$/)
     expect(new Set(displayColors).size).toBe(displayColors.length)
     expect(displayColors).toEqual(
       expect.arrayContaining(['#FFFFFF', '#000000', RED, BLUE]),
@@ -181,8 +190,8 @@ test.describe('3MF export', () => {
     const xml = await downloadModelXml(page)
 
     // Default sheet has separators but no icons — plate + separator colour.
-    expect(xml).toContain('<basematerials id="1">')
-    expect(xml).toContain('displaycolor="#FFFFFF"')
+    expect(xml).toContain('<m:colorgroup id="1">')
+    expect(xml).toContain('<m:color color="#FFFFFF" />')
     expect(xml).toContain('<vertex')
   })
 })

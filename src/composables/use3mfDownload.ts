@@ -15,11 +15,14 @@
  *
  * Multi-colour printing (Bambu Studio / Orca / PrusaSlicer)
  * ─────────────────────────────────────────────────────────
- *   Colours are carried by the 3MF core spec `<basematerials>` resource: one
- *   `<base displaycolor="#RRGGBB">` per distinct colour, referenced from each
- *   object via pid/pindex. Bambu Studio matches displaycolor against the loaded
- *   filaments by RGB distance; slicers that ignore materials still get one part
- *   per colour, so a filament can be assigned by hand in two clicks.
+ *   Colours ride on the 3MF materials extension: one `<m:colorgroup>` holding an
+ *   `<m:color>` per distinct colour, referenced from each object via pid/pindex.
+ *   That is the ONLY colour mechanism Bambu Studio parses out of a third-party
+ *   3MF — its importer (`bbs_3mf.cpp`) handles `m:colorgroup`/`m:color` and has
+ *   no `<basematerials>` code path at all, so core-spec base materials import as
+ *   plain white. Bambu maps each distinct colour string to an extruder slot.
+ *   Slicers that ignore the extension still get one part per colour, so a
+ *   filament can be assigned by hand.
  *
  *   Plate and icon objects share the Z=−EXTRUDE_H..0 region (the icons are
  *   embedded into the face) so the printed surface stays flat. Icon colour
@@ -733,7 +736,7 @@ function xmlAttr(value: string): string {
     .replace(/"/g, '&quot;')
 }
 
-function buildObjectXml(part: Part, materialIndex: number): string {
+function buildObjectXml(part: Part, colorIndex: number): string {
   const { id, name, tris } = part
   const triCount = tris.length / 9
   const vertMap = new Map<string, number>()
@@ -766,7 +769,7 @@ function buildObjectXml(part: Part, materialIndex: number): string {
     trisXml += `        <triangle v1="${v1}" v2="${v2}" v3="${v3}" />\n`
   }
 
-  return `    <object id="${id}" name="${xmlAttr(name)}" type="model" pid="${MATERIALS_ID}" pindex="${materialIndex}">
+  return `    <object id="${id}" name="${xmlAttr(name)}" type="model" pid="${COLOR_GROUP_ID}" pindex="${colorIndex}">
       <mesh>
         <vertices>
 ${vertsXml}        </vertices>
@@ -780,8 +783,8 @@ ${trisXml}        </triangles>
 // Puts the face (z=0, currently the top) at z=0 minimum so the slicer places it on the build plate.
 const FACE_DOWN_TRANSFORM = '1 0 0 0 -1 0 0 0 -1 0 0 0'
 
-// Resource ids share one namespace with objects — the material group takes the first.
-const MATERIALS_ID = 1
+// Resource ids share one namespace with objects — the colour group takes the first.
+const COLOR_GROUP_ID = 1
 
 /** One mesh in the exported model, carrying the colour it should print in. */
 interface Part {
@@ -796,7 +799,7 @@ function build3mfModel(
   plateColor: string,
   iconGroups: ColorGroup[],
 ): string {
-  let nextId = MATERIALS_ID + 1
+  let nextId = COLOR_GROUP_ID + 1
   const parts: Part[] = [
     { id: nextId++, name: 'Plate', color: plateColor, tris: plateTris },
     ...iconGroups.map((group) => ({
@@ -807,22 +810,19 @@ function build3mfModel(
     })),
   ]
 
-  // One <base> per distinct colour; parts sharing a colour share a material,
-  // so a slicer that maps materials → filaments needs one assignment per colour.
-  const materials = [...new Set(parts.map((p) => p.color))]
-  const materialIndex = new Map(materials.map((color, i) => [color, i]))
+  // One <m:color> per distinct colour; parts sharing a colour share an entry, so
+  // Bambu maps them to the same extruder slot.
+  const colors = [...new Set(parts.map((p) => p.color))]
+  const colorIndex = new Map(colors.map((color, i) => [color, i]))
 
-  const basematerials = `    <basematerials id="${MATERIALS_ID}">
-${materials
-  .map(
-    (color) =>
-      `      <base name="${xmlAttr(color)}" displaycolor="${color}" />`,
-  )
-  .join('\n')}
-    </basematerials>`
+  // 6-digit hex only: Slic3r-derived colour parsers (Bambu, Orca, PrusaSlicer)
+  // expect #RRGGBB and fall back to white on an 8-digit value.
+  const colorGroup = `    <m:colorgroup id="${COLOR_GROUP_ID}">
+${colors.map((color) => `      <m:color color="${color}" />`).join('\n')}
+    </m:colorgroup>`
 
   const objects = parts.map((part) =>
-    buildObjectXml(part, materialIndex.get(part.color) ?? 0),
+    buildObjectXml(part, colorIndex.get(part.color) ?? 0),
   )
 
   let buildItem: string
@@ -841,9 +841,9 @@ ${parts.map((p) => `        <component objectid="${p.id}" />`).join('\n')}
   }
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
+<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02">
   <resources>
-${basematerials}
+${colorGroup}
 ${objects.join('\n')}
   </resources>
   <build>
