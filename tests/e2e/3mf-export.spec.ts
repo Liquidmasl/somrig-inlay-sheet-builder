@@ -2,11 +2,13 @@
  * 3MF export — verifies the exported package carries one object per colour and
  * a matching <m:colorgroup> resource, the only colour mechanism Bambu Studio
  * parses out of a third-party 3MF.
+ * Also checks plate pockets and per-part filament assignments.
  *
  * The export only runs in a real browser (it samples the live SVG DOM via
  * getScreenCTM / getPointAtLength), so it is covered here rather than in a unit test.
  */
 
+import { mdiCog } from '@mdi/js'
 import { strFromU8, unzipSync } from 'fflate'
 import { expect, test } from './fixtures'
 
@@ -17,9 +19,13 @@ const BLUE = '#0A84FF'
 const SQUARE = 'M4 4 H20 V20 H4 Z'
 
 /** Seed a sheet with one button whose two halves use different icon colours. */
-async function seedTwoColourSheet(page: import('@playwright/test').Page) {
+async function seedTwoColourSheet(
+  page: import('@playwright/test').Page,
+  buttonType: 'somrig' | 'bilresa' = 'somrig',
+  icon = SQUARE,
+) {
   await page.addInitScript(
-    ([red, blue, square]: string[]) => {
+    ([red, blue, square, buttonType]: string[]) => {
       const zone = (iconColor: string) => ({
         type: 'single',
         icon: square,
@@ -39,7 +45,7 @@ async function seedTwoColourSheet(page: import('@playwright/test').Page) {
             {
               id: 'sheet-1',
               name: 'Test',
-              buttonType: 'somrig',
+              buttonType,
               buttons: [
                 {
                   id: 'sheet-1-btn-1',
@@ -62,15 +68,16 @@ async function seedTwoColourSheet(page: import('@playwright/test').Page) {
         }),
       )
     },
-    [RED, BLUE, SQUARE],
+    [RED, BLUE, icon, buttonType],
   )
 }
 
 /**
  * Select the first inlay (download buttons only render for the selected one),
  * click 3MF, and return the 3dmodel.model XML from the package.
+ * Also reads the per-part Bambu configuration for the new assertions.
  */
-async function downloadModelXml(page: import('@playwright/test').Page) {
+async function downloadPackage(page: import('@playwright/test').Page) {
   await page.locator('main button[aria-label]').first().click()
   // Both the desktop grid and the mobile list are in the DOM; take the visible one.
   const button = page
@@ -86,7 +93,10 @@ async function downloadModelXml(page: import('@playwright/test').Page) {
   const chunks: Buffer[] = []
   for await (const chunk of stream) chunks.push(chunk as Buffer)
   const files = unzipSync(new Uint8Array(Buffer.concat(chunks)))
-  return strFromU8(files['3D/3dmodel.model'])
+  return {
+    xml: strFromU8(files['3D/3dmodel.model']),
+    config: strFromU8(files['Metadata/model_settings.config']),
+  }
 }
 
 /** Mesh objects in the model, in resource order (the assembly has no mesh). */
@@ -101,6 +111,9 @@ function parseMeshObjects(xml: string) {
       triangles: [
         ...m[3].matchAll(/<triangle v1="(\d+)" v2="(\d+)" v3="(\d+)"/g),
       ].map((t) => [Number(t[1]), Number(t[2]), Number(t[3])] as const),
+      vertices: [
+        ...m[3].matchAll(/<vertex x="([^"]+)" y="([^"]+)" z="([^"]+)"/g),
+      ].map((v) => [Number(v[1]), Number(v[2]), Number(v[3])]),
     }))
 }
 
@@ -137,7 +150,7 @@ test.describe('3MF export', () => {
     await page.goto('/')
     await expect(page.locator('main svg').first()).toBeVisible()
 
-    const xml = await downloadModelXml(page)
+    const { xml, config } = await downloadPackage(page)
 
     // Colours must live in the materials-extension colour group, declared on <model>.
     expect(xml).toContain(
@@ -170,6 +183,56 @@ test.describe('3MF export', () => {
       expect(isWatertight(o.triangles), `${o.name} is watertight`).toBe(true)
     }
 
+    // Bambu must be able to assign a separate extruder to each child volume.
+    const buildId = /<item objectid="(\d+)"/.exec(xml)?.[1]
+    expect(config).toContain(`<object id="${buildId}">`)
+    for (const o of objects) {
+      const part = new RegExp(
+        `<part id="${o.id}"[^>]*>([\\s\\S]*?)<\\/part>`,
+      ).exec(config)?.[1]
+      expect(part, `${o.name} has an extruder assignment`).toContain(
+        `<metadata key="extruder" value="${Number(o.pindex) + 1}" />`,
+      )
+    }
+
+    // The inserts are flush, exactly two 0.2 mm layers deep, and the white
+    // plate no longer has a top face inside an icon footprint.
+    const plate = objects.find((o) => o.name === 'Plate')
+    if (!plate) throw new Error('Missing plate mesh')
+    for (const color of [RED, BLUE]) {
+      const icon = objects.find((o) => o.name === `Inlay ${color}`)
+      if (!icon) throw new Error(`Missing ${color} insert`)
+      expect(new Set(icon.vertices.map((v) => v[2]))).toEqual(
+        new Set([-0.4, 0]),
+      )
+      const topTriangle = icon.triangles.find((tri) =>
+        tri.every((index) => icon.vertices[index][2] === 0),
+      )
+      if (!topTriangle) throw new Error(`Missing ${color} top face`)
+      const point = [0, 1].map(
+        (axis) =>
+          topTriangle.reduce(
+            (sum, index) => sum + icon.vertices[index][axis],
+            0,
+          ) / 3,
+      )
+      const isInside = (tri: readonly number[]) => {
+        const [a, b, c] = tri.map((index) => plate.vertices[index])
+        const cross = (p: number[], q: number[]) =>
+          (q[0] - p[0]) * (point[1] - p[1]) - (q[1] - p[1]) * (point[0] - p[0])
+        const signs = [cross(a, b), cross(b, c), cross(c, a)]
+        return signs.every((s) => s > 1e-5) || signs.every((s) => s < -1e-5)
+      }
+      expect(
+        plate.triangles.some(
+          (tri) =>
+            tri.every((index) => plate.vertices[index][2] === 0) &&
+            isInside(tri),
+        ),
+        `${color} insert has a pocket in the plate`,
+      ).toBe(false)
+    }
+
     // All meshes are grouped into a single assembly placed by one build item.
     expect([...xml.matchAll(/<component objectid="\d+" \/>/g)].length).toBe(
       objects.length,
@@ -187,11 +250,32 @@ test.describe('3MF export', () => {
     await page.goto('/')
     await expect(page.locator('main svg').first()).toBeVisible()
 
-    const xml = await downloadModelXml(page)
+    const { xml } = await downloadPackage(page)
 
     // Default sheet has separators but no icons — plate + separator colour.
     expect(xml).toContain('<m:colorgroup id="1">')
     expect(xml).toContain('<m:color color="#FFFFFF" />')
     expect(xml).toContain('<vertex')
+  })
+
+  test('insets coloured icons into the Bilresa plate', async ({ page }) => {
+    await seedTwoColourSheet(page, 'bilresa', mdiCog)
+    await page.goto('/')
+    await expect(page.locator('main svg').first()).toBeVisible()
+    const { xml, config } = await downloadPackage(page)
+    const objects = parseMeshObjects(xml)
+    expect(objects.map((o) => o.name)).toEqual(
+      expect.arrayContaining(['Plate', `Inlay ${RED}`, `Inlay ${BLUE}`]),
+    )
+    for (const object of objects)
+      expect(isWatertight(object.triangles), object.name).toBe(true)
+    for (const color of [RED, BLUE]) {
+      const icon = objects.find((o) => o.name === `Inlay ${color}`)
+      expect(icon).toBeDefined()
+      expect(new Set(icon?.vertices.map((v) => v[2]))).toEqual(
+        new Set([-0.4, 0]),
+      )
+    }
+    expect(config).toContain('<metadata key="extruder" value="3" />')
   })
 })

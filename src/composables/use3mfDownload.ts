@@ -27,6 +27,9 @@
  *   Plate and icon objects share the Z=−EXTRUDE_H..0 region (the icons are
  *   embedded into the face) so the printed surface stays flat. Icon colour
  *   groups never overlap each other — see resolveColorGroups().
+ *
+ *   Bambu needs explicit extruder assignments for component volumes. Matching
+ *   pockets are cut out of the plate so the embedded icons do not overlap it.
  */
 
 import earcut from 'earcut'
@@ -538,6 +541,7 @@ function paintOf(el: Element, prop: 'fill' | 'stroke'): string {
 export interface ColorGroup {
   color: string // #RRGGBB
   tris: number[] // flat xyz triples, 9 numbers per triangle
+  area: polygonClipping.MultiPolygon // non-overlapping footprint in world XY
 }
 
 function collectIconGroups(
@@ -550,6 +554,7 @@ function collectIconGroups(
 
   // Icons are embedded INTO the face (face at Z=0, plate at Z<0).
   // Z0..Z1 overlaps the top EXTRUDE_H mm of the plate → Bambu assigns colour per object.
+  // insetIconsIntoPlate removes that overlapping plate region before export.
   const Z0 = -EXTRUDE_H
   const Z1 = 0
 
@@ -718,14 +723,125 @@ function resolveColorGroups(
     for (const [outer, ...holes] of area) {
       tris.push(...extrudePolygon(outer, holes, z0, z1))
     }
-    if (tris.length > 0) groups.push({ color: areas[i].color, tris })
+    if (tris.length > 0) groups.push({ color: areas[i].color, tris, area })
   }
   return groups
 }
 
+/**
+ * Replace only the flat top triangles of the supplied STL with a cap containing
+ * icon-shaped pockets. The rest of the supplied model (including its detailed
+ * sides and back) remains untouched. Clip icons to that flat cap so no inlay
+ * extends through the model's rounded rim.
+ */
+function insetIconsIntoPlate(
+  plateTris: number[],
+  groups: ColorGroup[],
+): { plateTris: number[]; iconGroups: ColorGroup[] } {
+  if (groups.length === 0) return { plateTris, iconGroups: groups }
+
+  const top: polygonClipping.Polygon[] = []
+  const rest: number[] = []
+  for (let i = 0; i < plateTris.length; i += 9) {
+    const tri = plateTris.slice(i, i + 9)
+    if (
+      Math.abs(tri[2]) < 1e-5 &&
+      Math.abs(tri[5]) < 1e-5 &&
+      Math.abs(tri[8]) < 1e-5
+    ) {
+      // The STL contains microscopic gaps between nominally shared vertices.
+      // Snap to the same precision used by the 3MF writer before boolean ops.
+      top.push([
+        [
+          [tri[0], tri[1]],
+          [tri[3], tri[4]],
+          [tri[6], tri[7]],
+        ].map(([x, y]) => [Number(x.toFixed(4)), Number(y.toFixed(4))]),
+      ])
+    } else {
+      rest.push(...tri)
+    }
+  }
+  if (top.length === 0) return { plateTris, iconGroups: [] }
+
+  const cap = polygonClipping.union(top[0], ...top.slice(1))
+  // Keep the inlays away from the STL's rim. At the outer cap boundary the
+  // existing sloping sidewall has no vertices at pocket depth; ending a pocket
+  // there would leave an open edge (and an unprintable non-manifold plate).
+  const xs = cap.flat(2).map(([x]) => x)
+  const ys = cap.flat(2).map(([, y]) => y)
+  const minX = Math.min(...xs),
+    maxX = Math.max(...xs)
+  const minY = Math.min(...ys),
+    maxY = Math.max(...ys)
+  const cx = (minX + maxX) / 2,
+    cy = (minY + maxY) / 2
+  const insetX = (maxX - minX - 1.6) / (maxX - minX)
+  const insetY = (maxY - minY - 1.6) / (maxY - minY)
+  const safeCap = polygonClipping.intersection(
+    cap,
+    cap.map((polygon) =>
+      polygon.map((ring) =>
+        ring.map(([x, y]) => [cx + (x - cx) * insetX, cy + (y - cy) * insetY]),
+      ),
+    ),
+  )
+  const iconGroups = groups.flatMap((group) => {
+    const area = polygonClipping.intersection(group.area, safeCap)
+    if (!area.length) return []
+    const tris: number[] = []
+    for (const [outer, ...holes] of area) {
+      tris.push(...extrudePolygon(outer, holes, -EXTRUDE_H, 0))
+    }
+    return tris.length ? [{ color: group.color, area, tris }] : []
+  })
+  if (iconGroups.length === 0) return { plateTris, iconGroups }
+
+  const cutouts = polygonClipping.union(
+    iconGroups[0].area,
+    ...iconGroups.slice(1).map((g) => g.area),
+  )
+  for (const [outer, ...holes] of polygonClipping.difference(cap, cutouts)) {
+    rest.push(...topFace(outer, holes, 0))
+  }
+  // The pocket floor and walls belong to the plate, not the coloured inlay.
+  // They coincide with (and face opposite to) the inserted icon's bottom/walls.
+  for (const [outer, ...holes] of cutouts) {
+    const solid = extrudePolygon(outer, holes, -EXTRUDE_H, 0)
+    for (let i = 0; i < solid.length; i += 9) {
+      const tri = solid.slice(i, i + 9)
+      if (tri[2] === 0 && tri[5] === 0 && tri[8] === 0) continue
+      // The pocket has no top; invert the remaining faces of the plug.
+      rest.push(...tri.slice(0, 3), ...tri.slice(6, 9), ...tri.slice(3, 6))
+    }
+  }
+  return { plateTris: rest, iconGroups }
+}
+
+/** Triangulate a flat polygon without adding any sidewalls. */
+function topFace(
+  outer: [number, number][],
+  holes: [number, number][][],
+  z: number,
+): number[] {
+  const rings = [cleanRing(outer), ...holes.map(cleanRing)]
+  const flat = rings.flatMap((ring) => ring.flat())
+  const indices: number[] = []
+  let offset = rings[0].length
+  for (const ring of rings.slice(1)) {
+    indices.push(offset)
+    offset += ring.length
+  }
+  const tris: number[] = []
+  for (const index of earcut(flat, indices)) {
+    tris.push(flat[2 * index], flat[2 * index + 1], z)
+  }
+  return tris
+}
+
 // ── 3MF XML builder ───────────────────────────────────────────────────────────
 
-const fmt = (n: number) => n.toFixed(4)
+const fmt = (n: number) => (Math.abs(n) < 0.00005 ? 0 : n).toFixed(4)
 
 /** Escape a string for use inside an XML attribute value. */
 function xmlAttr(value: string): string {
@@ -798,7 +914,7 @@ function build3mfModel(
   plateTris: number[],
   plateColor: string,
   iconGroups: ColorGroup[],
-): string {
+): { modelXml: string; bambuConfig: string } {
   let nextId = COLOR_GROUP_ID + 1
   const parts: Part[] = [
     { id: nextId++, name: 'Plate', color: plateColor, tris: plateTris },
@@ -826,10 +942,12 @@ ${colors.map((color) => `      <m:color color="${color}" />`).join('\n')}
   )
 
   let buildItem: string
+  let buildId: number
   if (parts.length > 1) {
     // Wrap the meshes in a component object so the slicer keeps them grouped as
     // parts of one printable object, each with its own filament assignment.
     const assemblyId = nextId++
+    buildId = assemblyId
     objects.push(`    <object id="${assemblyId}" type="model">
       <components>
 ${parts.map((p) => `        <component objectid="${p.id}" />`).join('\n')}
@@ -837,10 +955,29 @@ ${parts.map((p) => `        <component objectid="${p.id}" />`).join('\n')}
     </object>`)
     buildItem = `    <item objectid="${assemblyId}" transform="${FACE_DOWN_TRANSFORM}" />`
   } else {
+    buildId = parts[0].id
     buildItem = `    <item objectid="${parts[0].id}" transform="${FACE_DOWN_TRANSFORM}" />`
   }
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
+  // Bambu's 3MF importer uses the build object's pid for its extruder and does
+  // not propagate component pid/pindex to the corresponding printable volumes.
+  // Its model_settings.config supplies the missing per-volume assignments.
+  const bambuConfig = `<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <object id="${buildId}">
+    <metadata key="extruder" value="1" />
+${parts
+  .map(
+    (part) => `    <part id="${part.id}" subtype="normal_part">
+      <metadata key="name" value="${xmlAttr(part.name)}" />
+      <metadata key="extruder" value="${(colorIndex.get(part.color) ?? 0) + 1}" />
+    </part>`,
+  )
+  .join('\n')}
+  </object>
+</config>`
+
+  const modelXml = `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02">
   <resources>
 ${colorGroup}
@@ -850,6 +987,7 @@ ${objects.join('\n')}
 ${buildItem}
   </build>
 </model>`
+  return { modelXml, bambuConfig }
 }
 
 // ── Composable ────────────────────────────────────────────────────────────────
@@ -867,12 +1005,19 @@ export function use3mfDownload() {
       ),
     ])
 
-    const plateTris = parseStl(stlBuf)
-    const iconGroups = collectIconGroups(svgEl, font)
+    const { plateTris, iconGroups } = insetIconsIntoPlate(
+      parseStl(stlBuf),
+      collectIconGroups(svgEl, font),
+    )
     // The button outline is the SVG's only direct <path> child; its fill is the
     // plate colour shown in the preview.
     const outline = svgEl.querySelector(':scope > path')
     const plateColor = outline ? paintOf(outline, 'fill') : DEFAULT_PLATE_COLOR
+    const { modelXml, bambuConfig } = build3mfModel(
+      plateTris,
+      plateColor,
+      iconGroups,
+    )
 
     const enc = new TextEncoder()
     const contentTypes = `<?xml version="1.0" encoding="UTF-8"?>
@@ -888,9 +1033,8 @@ export function use3mfDownload() {
     const zipped = fflate.zipSync({
       '[Content_Types].xml': enc.encode(contentTypes),
       '_rels/.rels': enc.encode(rels),
-      '3D/3dmodel.model': enc.encode(
-        build3mfModel(plateTris, plateColor, iconGroups),
-      ),
+      '3D/3dmodel.model': enc.encode(modelXml),
+      'Metadata/model_settings.config': enc.encode(bambuConfig),
     })
 
     const blob = new Blob([zipped.buffer as ArrayBuffer], { type: 'model/3mf' })
