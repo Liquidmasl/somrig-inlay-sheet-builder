@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.0] - 2026-11-08
+
+
+- Create buttons from a link: add `#layout=` with URL-encoded JSON to append buttons to your sheet, for example from a Home Assistant template. See the [guide](https://somrig.marcel1.com/layout-links.md).
+
+Closes LQM-176
+
+
 ## [2.2.1] - 2026-10-24
 
 
