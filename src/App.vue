@@ -22,6 +22,7 @@ import { use3mfDownload } from './composables/use3mfDownload'
 import { useAnalytics } from './composables/useAnalytics'
 import { useDarkMode } from './composables/useDarkMode'
 import { useDonationPrompt } from './composables/useDonationPrompt'
+import { useLayoutLink } from './composables/useLayoutLink'
 import { usePdfDownload } from './composables/usePdfDownload'
 import { useSheets } from './composables/useSheets'
 import { useSvgDownload } from './composables/useSvgDownload'
@@ -68,6 +69,8 @@ const {
   exportState,
   importState,
 } = useSheets()
+
+const { layoutLinkError, dismissLayoutLinkError } = useLayoutLink()
 
 const activeButtonType = computed<ButtonType>(
   () => activeSheet.value?.buttonType ?? 'somrig',
@@ -309,6 +312,19 @@ async function downloadSheetPdfAction() {
     <!-- Main content area -->
     <main class="flex-1 overflow-auto pt-4 md:pb-[420px] md:pb-72">
       <div class=" mx-auto">
+        <div
+          v-if="layoutLinkError"
+          role="alert"
+          class="print:hidden mx-4 mb-3 flex items-center justify-between gap-3 rounded-md border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950 px-3 py-2 text-xs text-red-800 dark:text-red-200"
+        >
+          <span>Couldn't import the layout link: {{ layoutLinkError }}</span>
+          <button
+            class="shrink-0 px-1 text-base leading-none"
+            aria-label="Dismiss"
+            @click="dismissLayoutLinkError"
+          >×</button>
+        </div>
+
         <!-- Toolbar: model | save/load | print/export -->
         <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 mb-3">
           <input
