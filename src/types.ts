@@ -11,7 +11,7 @@ export interface SeparatorStyle {
 
 export interface ActionZone {
   type: ActionType
-  icon: string | null // MDI icon path name (e.g., 'mdiLightbulb')
+  icon: string | null // SVG path data from @mdi/js
   iconSize: number // mm, default 12
   iconColor: string // hex color, default '#000000'
   iconRotation: number // degrees, default 0
@@ -35,6 +35,12 @@ export interface ButtonInlay {
   bottom: PhysicalButton
   horizontalSeparator: SeparatorStyle
   verticalSeparator: SeparatorStyle
+}
+
+// Zones for a new button; fields left out take the zone defaults.
+export interface ButtonLayout {
+  top: Partial<ActionZone>[]
+  bottom: Partial<ActionZone>[]
 }
 
 export interface Sheet {

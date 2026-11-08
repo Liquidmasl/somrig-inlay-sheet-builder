@@ -3,6 +3,7 @@ import type {
   ActionType,
   ActionZone,
   ButtonInlay,
+  ButtonLayout,
   ButtonType,
   IndicatorPosition,
   SeparatorStyle,
@@ -30,6 +31,10 @@ function createDefaultZone(type: ActionType = 'single'): ActionZone {
     iconColor: '#000000',
     iconRotation: 0,
   }
+}
+
+function createDefaultZoneAt(index: number): ActionZone {
+  return createDefaultZone(DEFAULT_ZONE_TYPES[index] ?? 'single')
 }
 
 const DEFAULT_SEPARATOR: SeparatorStyle = {
@@ -66,7 +71,7 @@ function nextId(): string {
   return String(_nextId++)
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
+export function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
@@ -282,6 +287,26 @@ export function useSheets() {
     return btn
   }
 
+  function appendButtons(
+    sheetId: string,
+    layouts: ButtonLayout[],
+  ): ButtonInlay[] {
+    const sheet = sheets.value.find((s) => s.id === sheetId)
+    if (!sheet) return []
+
+    const toZones = (zones: Partial<ActionZone>[]): ActionZone[] =>
+      zones.map((zone, i) => ({ ...createDefaultZoneAt(i), ...zone }))
+
+    const added = layouts.map((layout) => {
+      const btn = createDefaultButtonInlay(`${sheetId}-btn-${nextId()}`)
+      btn.top.zones = toZones(layout.top)
+      btn.bottom.zones = toZones(layout.bottom)
+      return btn
+    })
+    sheet.buttons.push(...added)
+    return added
+  }
+
   function duplicateButton(
     sheetId: string,
     buttonId: string,
@@ -335,7 +360,7 @@ export function useSheets() {
     const current = phys.zones
     phys.zones = Array.from({ length: count }, (_, i) => {
       if (i < current.length) return toRaw(current[i])
-      return createDefaultZone(DEFAULT_ZONE_TYPES[i] ?? 'single')
+      return createDefaultZoneAt(i)
     })
   }
 
@@ -393,6 +418,7 @@ export function useSheets() {
     addSheet,
     removeSheet,
     addButton,
+    appendButtons,
     duplicateButton,
     removeButton,
     setZoneCount,
