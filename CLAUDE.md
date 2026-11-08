@@ -91,6 +91,7 @@ Playwright is used for e2e tests. Config: `playwright.config.ts`. Tests live in 
 | `tests/e2e/3mf-export.spec.ts` | 3MF package structure, per-colour objects, watertight meshes |
 | `tests/e2e/editor-panel-layering.spec.ts` | Floating editor panel stacks above card action buttons |
 | `tests/e2e/whats-new.spec.ts` | What's New reopening from the header, photo carousel |
+| `tests/e2e/layout-link.spec.ts` | `#layout=` links: appending buttons, MDI name lookup, error handling |
 | `tests/e2e/screenshot.spec.ts` | Screenshot capture for PR documentation |
 
 **Screenshots** are written to `tests/e2e/screenshots/` (gitignored by default).
@@ -129,3 +130,4 @@ The workflow:
 |------|-------|
 | `.claude/stack.md` | Tailwind v4 setup details, MDI usage patterns, Vite 8 notes |
 | `.claude/3mf-export.md` | 3MF pipeline, per-colour grouping, Bambu colour handling |
+| `public/layout-links.md` | `#layout=` link format and how to build one. Served on the site; update it when the format changes |

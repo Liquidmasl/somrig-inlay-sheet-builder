@@ -20,6 +20,22 @@ Each physical button has a **top half** and a **bottom half**, and each half can
 
 ---
 
+## Create buttons from a link
+
+Add `#layout=` and URL-encoded JSON to the app URL to append buttons to the current sheet. This lets other tools generate layouts, for example a Home Assistant template:
+
+```jinja
+{% set layout = {"v": 1, "buttons": [{
+  "top": [{"icon": "mdi:lightbulb", "label": "Light"}, {"icon": "mdi:weather-night"}],
+  "bottom": [{"icon": "mdi:lightbulb-off"}]
+}]} %}
+[Open layout](https://somrig.marcel1.com/#layout={{ layout | to_json | urlencode }})
+```
+
+If anything in a link is invalid, no buttons are added and the app shows what's wrong. The full format is in the [layout link guide](public/layout-links.md), written so an AI assistant can build links from it.
+
+---
+
 ## Screenshots
 
 ### Light mode
